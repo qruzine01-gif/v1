@@ -6,8 +6,7 @@ const QRCode = require("../models/QRCode")
 const Restaurant = require("../models/Restaurant")
 const User = require("../models/User")
 const { authenticateSubAdmin, verifyRestaurantAccess } = require("../middleware/auth")
-const { generateOrderID, calculateEstimatedTime, isValidEmail, isValidPhone } = require("../utils/helpers")
-const { sendOrderConfirmation, sendOrderStatusUpdate } = require("../utils/emailService")
+const { generateOrderID, isValidPhone } = require("../utils/helpers")
 const { sendOrderConfirmationWhatsApp, sendOrderStatusWhatsApp } = require("../utils/whatsappService")
 const { orderValidation } = require("../utils/validation")
 const { generateInvoiceHTML } = require("../utils/invoiceGenerator")
@@ -28,16 +27,17 @@ router.post("/place", orderValidation, async (req, res) => {
 
     const { resID, qrID, customer, items, specialRequest } = req.body
 
-    // Validate restaurant and QR code
-    const restaurant = await Restaurant.findOne({ resID, isActive: true })
+    // Validate restaurant and QR code (parallel)
+    const [restaurant, qrCode] = await Promise.all([
+      Restaurant.findOne({ resID, isActive: true }).lean(),
+      QRCode.findOne({ qrID, resID, isActive: true }).lean(),
+    ])
     if (!restaurant) {
       return res.status(404).json({
         success: false,
         message: "Restaurant not found or inactive",
       })
     }
-
-    const qrCode = await QRCode.findOne({ qrID, resID, isActive: true })
     if (!qrCode) {
       return res.status(404).json({
         success: false,
@@ -45,14 +45,7 @@ router.post("/place", orderValidation, async (req, res) => {
       })
     }
 
-    // Validate customer data
-    if (!isValidEmail(customer.email)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid email format",
-      })
-    }
-
+    // Validate customer data (phone only)
     if (!isValidPhone(customer.phone)) {
       return res.status(400).json({
         success: false,
@@ -60,14 +53,14 @@ router.post("/place", orderValidation, async (req, res) => {
       })
     }
 
-    // Validate and process menu items
+    // Validate and process menu items (optimize: dedupe + projection + lean)
     const menuItemIds = items.map((item) => item.menuID)
     const uniqueMenuIds = [...new Set(menuItemIds)]
-    const menuItems = await MenuItem.find({
-      menuID: { $in: uniqueMenuIds },
-      resID,
-      isAvailable: true,
-    })
+    const menuItems = await MenuItem.find(
+      { menuID: { $in: uniqueMenuIds }, resID, isAvailable: true },
+    )
+      .select("menuID name basePrice variants preparationTime")
+      .lean()
 
     if (menuItems.length !== uniqueMenuIds.length) {
       return res.status(400).json({
@@ -76,39 +69,42 @@ router.post("/place", orderValidation, async (req, res) => {
       })
     }
 
-    // Calculate total amount and prepare order items
+    // Calculate total amount and prepare order items (optimize: use map for O(1) lookup)
+    const menuMap = new Map(menuItems.map(mi => [mi.menuID, mi]))
     let totalAmount = 0
+    let maxItemTime = 0
     const orderItems = items.map((orderItem) => {
-      const menuItem = menuItems.find((mi) => mi.menuID === orderItem.menuID)
+      const menuItem = menuMap.get(orderItem.menuID)
 
       // Determine unit price: use variant if provided and available; else basePrice
-      let unitPrice = menuItem.basePrice || 0
+      let unitPrice = menuItem?.basePrice || 0
       let variantName = orderItem.variantName || null
-      if (variantName && Array.isArray(menuItem.variants) && menuItem.variants.length) {
+      if (menuItem && variantName && Array.isArray(menuItem.variants) && menuItem.variants.length) {
         const variant = menuItem.variants.find(v => v.name === variantName && v.isAvailable !== false)
         if (variant) unitPrice = variant.price
       }
 
-      const itemTotal = unitPrice * orderItem.quantity
+      const qty = orderItem.quantity || 1
+      const itemTotal = unitPrice * qty
       totalAmount += itemTotal
 
+      // Track maximum per-item total preparation time
+      const prep = menuItem?.preparationTime ?? 15
+      const itemTime = prep * qty
+      if (itemTime > maxItemTime) maxItemTime = itemTime
+
       return {
-        menuID: menuItem.menuID,
-        name: menuItem.name,
+        menuID: menuItem?.menuID || orderItem.menuID,
+        name: menuItem?.name || "",
         variantName: variantName || undefined,
         price: unitPrice,
-        quantity: orderItem.quantity,
+        quantity: qty,
         specialInstructions: orderItem.specialInstructions || "",
       }
     })
 
-    // Calculate estimated preparation time
-    const estimatedTime = calculateEstimatedTime(
-      orderItems.map((item) => ({
-        preparationTime: menuItems.find((mi) => mi.menuID === item.menuID)?.preparationTime || 15,
-        quantity: item.quantity,
-      })),
-    )
+    // Calculate estimated preparation time as maximum time among all items
+    const estimatedTime = maxItemTime || 15
 
     // Generate order ID
     const orderID = generateOrderID()
@@ -129,75 +125,67 @@ router.post("/place", orderValidation, async (req, res) => {
 
     await order.save()
 
-    // Store/update user data for super admin export
-    const isGuestEmail = !customer.email || customer.email.toLowerCase() === "guest@example.com"
-    const userQuery = isGuestEmail
-      ? { phone: customer.phone, resID }
-      : { email: customer.email, resID }
-    const existingUser = await User.findOne(userQuery)
-    if (existingUser) {
-      existingUser.orderCount += 1
-      existingUser.lastOrderDate = new Date()
-      existingUser.location = qrCode.type // Update location to latest QR location
-      // Persist optional birthday-related fields if provided
-      if (customer.age !== undefined) existingUser.age = customer.age
-      if (customer.dob) existingUser.dob = customer.dob
-      // If previously stored via phone and we now have a real email, set it
-      if (!isGuestEmail && !existingUser.email) existingUser.email = customer.email
-      await existingUser.save()
-    } else {
-      const newUser = new User({
-        name: customer.name,
-        phone: customer.phone,
-        email: isGuestEmail ? undefined : customer.email,
-        location: qrCode.type,
-        resID,
-        orderCount: 1,
-        age: customer.age,
-        dob: customer.dob,
-      })
-      await newUser.save()
-    }
-
-    // Send order confirmation email
-    try {
-      await sendOrderConfirmation({
-        orderID: order.orderID,
-        customer: order.customer,
-        qrID: order.qrID,
-        items: order.items,
-        totalAmount: order.totalAmount,
-        estimatedTime: order.estimatedTime,
-        specialRequest: order.specialRequest,
-      })
-    } catch (emailError) {
-      console.error("Failed to send order confirmation email:", emailError)
-      // Don't fail the order if email fails
-    }
-
-    // Send WhatsApp confirmation (best-effort)
-    try {
-      const waResult = await sendOrderConfirmationWhatsApp({
-        orderID: order.orderID,
-        customer: order.customer,
-        qrID: order.qrID,
-        qrName: qrCode.type || qrCode.description,
-        items: order.items,
-        totalAmount: order.totalAmount,
-        estimatedTime: order.estimatedTime,
-        specialRequest: order.specialRequest,
-        restaurantName: restaurant?.name,
-      })
-      if (waResult?.sid) {
-        console.log("Order confirmation WhatsApp sent:", waResult.sid)
-      } else if (waResult?.skipped) {
-        console.warn("Order confirmation WhatsApp skipped (config/phone)")
-      } else if (waResult?.error) {
-        console.error("Order confirmation WhatsApp error:", waResult.error)
+    // Store/update user data for super admin export (fire-and-forget to reduce latency)
+    ;(async () => {
+      try {
+        const isGuestEmail = !customer.email || customer.email.toLowerCase() === "guest@example.com"
+        const userQuery = isGuestEmail
+          ? { phone: customer.phone, resID }
+          : { email: customer.email, resID }
+        const existingUser = await User.findOne(userQuery)
+        if (existingUser) {
+          existingUser.orderCount += 1
+          existingUser.lastOrderDate = new Date()
+          existingUser.location = qrCode.type
+          if (customer.age !== undefined) existingUser.age = customer.age
+          if (customer.dob) existingUser.dob = customer.dob
+          if (!isGuestEmail && !existingUser.email) existingUser.email = customer.email
+          await existingUser.save()
+        } else {
+          const newUser = new User({
+            name: customer.name,
+            phone: customer.phone,
+            email: isGuestEmail ? undefined : customer.email,
+            location: qrCode.type,
+            resID,
+            orderCount: 1,
+            age: customer.age,
+            dob: customer.dob,
+          })
+          await newUser.save()
+        }
+      } catch (e) {
+        console.error("Background user upsert failed:", e)
       }
-    } catch (waError) {
-      console.error("Failed to send order confirmation WhatsApp:", waError)
-    }
+    })()
+
+    // Removed email confirmation to reduce latency
+
+    // Send WhatsApp confirmation (best-effort, fire-and-forget)
+    ;(async () => {
+      try {
+        const waResult = await sendOrderConfirmationWhatsApp({
+          orderID: order.orderID,
+          customer: order.customer,
+          qrID: order.qrID,
+          qrName: qrCode.type || qrCode.description,
+          items: order.items,
+          totalAmount: order.totalAmount,
+          estimatedTime: order.estimatedTime,
+          specialRequest: order.specialRequest,
+          restaurantName: restaurant?.name,
+        })
+        if (waResult?.sid) {
+          console.log("Order confirmation WhatsApp sent:", waResult.sid)
+        } else if (waResult?.skipped) {
+          console.warn("Order confirmation WhatsApp skipped (config/phone)")
+        } else if (waResult?.error) {
+          console.error("Order confirmation WhatsApp error:", waResult.error)
+        }
+      } catch (waError) {
+        console.error("Failed to send order confirmation WhatsApp:", waError)
+      }
+    })()
 
     res.status(201).json({
       success: true,
@@ -345,33 +333,28 @@ router.patch("/:orderID/status", authenticateSubAdmin, async (req, res) => {
 
     await order.save()
 
-    // Send status update email if status changed
+    // Send status update via WhatsApp only (best-effort)
     if (previousStatus !== status) {
-      try {
-        await sendOrderStatusUpdate(order, status)
-      } catch (emailError) {
-        console.error("Failed to send status update email:", emailError)
-        // Don't fail the update if email fails
-      }
-      // Also send WhatsApp update (best-effort)
-      try {
-        // Attach qrName for message context
-        const [qr, restaurant] = await Promise.all([
-          QRCode.findOne({ qrID: order.qrID }).select("type description"),
-          Restaurant.findOne({ resID: order.resID }).select("name"),
-        ])
-        const orderForMsg = { ...order.toObject(), qrName: (qr?.type || qr?.description) }
-        const waResult = await sendOrderStatusWhatsApp(orderForMsg, status, { restaurantName: restaurant?.name })
-        if (waResult?.sid) {
-          console.log("Order status WhatsApp sent:", waResult.sid)
-        } else if (waResult?.skipped) {
-          console.warn("Order status WhatsApp skipped (config/phone)")
-        } else if (waResult?.error) {
-          console.error("Order status WhatsApp error:", waResult.error)
+      ;(async () => {
+        try {
+          // Attach qrName for message context
+          const [qr, restaurant] = await Promise.all([
+            QRCode.findOne({ qrID: order.qrID }).select("type description").lean(),
+            Restaurant.findOne({ resID: order.resID }).select("name").lean(),
+          ])
+          const orderForMsg = { ...order.toObject(), qrName: (qr?.type || qr?.description) }
+          const waResult = await sendOrderStatusWhatsApp(orderForMsg, status, { restaurantName: restaurant?.name })
+          if (waResult?.sid) {
+            console.log("Order status WhatsApp sent:", waResult.sid)
+          } else if (waResult?.skipped) {
+            console.warn("Order status WhatsApp skipped (config/phone)")
+          } else if (waResult?.error) {
+            console.error("Order status WhatsApp error:", waResult.error)
+          }
+        } catch (waError) {
+          console.error("Failed to send status update WhatsApp:", waError)
         }
-      } catch (waError) {
-        console.error("Failed to send status update WhatsApp:", waError)
-      }
+      })()
     }
 
     res.json({
@@ -598,13 +581,6 @@ router.patch("/:orderID/cancel", authenticateSubAdmin, async (req, res) => {
     })
 
     await order.save()
-
-    // Send cancellation email
-    try {
-      await sendOrderStatusUpdate(order, "Cancelled")
-    } catch (emailError) {
-      console.error("Failed to send cancellation email:", emailError)
-    }
 
     res.json({
       success: true,

@@ -3,14 +3,44 @@ const { orderConfirmationTemplate, statusUpdateTemplate, restaurantCredentialsTe
 
 // Create transporter
 const createTransporter = () => {
-  return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    secure: false, // true for 465, false for other ports
+  const useService = (process.env.EMAIL_SERVICE || "").trim()
+  const portEnv = Number(process.env.EMAIL_PORT) || 587
+  const secureEnv = String(process.env.EMAIL_SECURE || "").toLowerCase() === "true"
+  const allowSelfSigned = String(process.env.EMAIL_ALLOW_SELF_SIGNED || "").toLowerCase() === "true"
+
+  const commonOptions = {
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
+    // Connection pooling + timeouts to reduce ETIMEDOUT issues
+    pool: true,
+    maxConnections: Number(process.env.EMAIL_MAX_CONNECTIONS) || 3,
+    maxMessages: Number(process.env.EMAIL_MAX_MESSAGES) || 50,
+    connectionTimeout: Number(process.env.EMAIL_CONN_TIMEOUT) || 15000, // 15s
+    greetingTimeout: Number(process.env.EMAIL_GRT_TIMEOUT) || 10000, // 10s
+    socketTimeout: Number(process.env.EMAIL_SOCK_TIMEOUT) || 20000, // 20s
+    debug: String(process.env.EMAIL_DEBUG || "").toLowerCase() === "true",
+  }
+
+  if (useService) {
+    return nodemailer.createTransport({
+      service: useService,
+      secure: secureEnv, // depends on provider; set via env if needed
+      tls: allowSelfSigned ? { rejectUnauthorized: false } : undefined,
+      ...commonOptions,
+    })
+  }
+
+  const port = portEnv
+  const secure = secureEnv || port === 465
+
+  return nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port,
+    secure, // true for 465, false otherwise
+    tls: allowSelfSigned ? { rejectUnauthorized: false } : undefined,
+    ...commonOptions,
   })
 }
 
