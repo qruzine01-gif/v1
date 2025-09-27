@@ -11,7 +11,6 @@ try {
 const fs = require('fs');
 const path = require('path');
 
-// Helper: convert AwesomeQR buffer/ArrayBuffer/Uint8Array to data URL
 const bufferToDataUrl = (buf) => {
   let nodeBuf;
   if (Buffer.isBuffer(buf)) nodeBuf = buf;
@@ -22,8 +21,6 @@ const bufferToDataUrl = (buf) => {
   return `data:image/png;base64,${base64}`;
 };
 
-// Helper: sanity-check a drawn region to ensure it contains both light and dark pixels
-// Returns true if looks valid (has contrast), false if mostly uniform (likely blank/black)
 const hasContrast = (ctx, x, y, w, h) => {
   try {
     const data = ctx.getImageData(x, y, w, h).data;
@@ -37,9 +34,64 @@ const hasContrast = (ctx, x, y, w, h) => {
     }
     return max - min > 40; // arbitrary threshold for QR black/white contrast
   } catch (_) {
-    // If we cannot read pixels, assume valid to avoid false negatives
-    return true;
+    // If we cannot read pixels, assume invalid so we fall back to base QR
+    return false;
   }
+};
+
+// Helper: wrap text into lines that fit within maxWidth using the current ctx.font
+const wrapTextLines = (ctx, text, maxWidth) => {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines = [];
+  let current = '';
+  for (const w of words) {
+    const test = current ? current + ' ' + w : w;
+    if (ctx.measureText(test).width <= maxWidth) {
+      current = test;
+    } else {
+      if (current) lines.push(current);
+      current = w;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+};
+
+// Helper: draw up to maxLines centered lines around centerY and return the used font size
+const drawWrappedCentered = (ctx, text, options) => {
+  const {
+    centerX,
+    centerY,
+    maxWidth,
+    fontFamily = 'serif',
+    weight = '900',
+    initialSize = 84,
+    minSize = 28,
+    maxLines = 2,
+  } = options;
+
+  let size = initialSize;
+  let lines = [];
+  while (size >= minSize) {
+    ctx.font = `${weight} ${size}px ${fontFamily}`;
+    lines = wrapTextLines(ctx, text, maxWidth);
+    if (lines.length <= maxLines) break;
+    size -= 2;
+  }
+  if (lines.length > maxLines) {
+    // Force into maxLines by merging overflow
+    const merged = [lines[0], lines.slice(1).join(' ')];
+    lines = merged.slice(0, maxLines);
+  }
+  const lineHeight = size + 4;
+  const totalHeight = lineHeight * (lines.length - 1);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  lines.forEach((line, idx) => {
+    const y = centerY - totalHeight / 2 + idx * lineHeight;
+    ctx.fillText(line.toUpperCase(), centerX, y);
+  });
+  return size;
 };
 
 /**
@@ -496,22 +548,23 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       ctx.fillStyle = burgundy;
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-      // Title
-      const title = (restaurantName || 'RESTAURANT NAME').toUpperCase();
+      // Title (auto-wrap to next line for long names)
+      const title = (restaurantName || 'RESTAURANT NAME');
       ctx.fillStyle = cream;
-      ctx.textAlign = 'center';
-      let titleSize = 84;
-      ctx.font = `900 ${titleSize}px ${fontFamily}`;
-      const maxTitleWidth = canvasWidth - 80;
-      while (ctx.measureText(title).width > maxTitleWidth && titleSize > 36) {
-        titleSize -= 4;
-        ctx.font = `900 ${titleSize}px ${fontFamily}`;
-      }
       ctx.shadowColor = 'rgba(0,0,0,0.25)';
       ctx.shadowBlur = 4;
       ctx.shadowOffsetX = 2;
       ctx.shadowOffsetY = 2;
-      ctx.fillText(title, canvasWidth / 2, 150);
+      drawWrappedCentered(ctx, title, {
+        centerX: canvasWidth / 2,
+        centerY: 150,
+        maxWidth: canvasWidth - 80,
+        fontFamily,
+        weight: '900',
+        initialSize: 84,
+        minSize: 28,
+        maxLines: 2,
+      });
       ctx.shadowColor = 'transparent';
 
       // Rounded cream panel for QR
