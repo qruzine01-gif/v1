@@ -557,12 +557,12 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       ctx.shadowOffsetY = 2;
       drawWrappedCentered(ctx, title, {
         centerX: canvasWidth / 2,
-        centerY: 150,
-        maxWidth: canvasWidth - 80,
+        centerY: 140,
+        maxWidth: canvasWidth - 100,
         fontFamily,
         weight: '900',
-        initialSize: 84,
-        minSize: 28,
+        initialSize: 72,
+        minSize: 24,
         maxLines: 2,
       });
       ctx.shadowColor = 'transparent';
