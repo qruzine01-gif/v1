@@ -1,7 +1,46 @@
 const { AwesomeQR } = require('awesome-qr');
-const { createCanvas, loadImage, registerFont } = require('canvas');
+// Prefer @napi-rs/canvas in production (no system deps). Fallback to node-canvas.
+let createCanvas, loadImage, registerFont;
+try {
+  ({ createCanvas, loadImage, registerFont } = require('@napi-rs/canvas'));
+  console.log('[QR] Using @napi-rs/canvas');
+} catch (_) {
+  ({ createCanvas, loadImage, registerFont } = require('canvas'));
+  console.log('[QR] Using node-canvas');
+}
 const fs = require('fs');
 const path = require('path');
+
+// Helper: convert AwesomeQR buffer/ArrayBuffer/Uint8Array to data URL
+const bufferToDataUrl = (buf) => {
+  let nodeBuf;
+  if (Buffer.isBuffer(buf)) nodeBuf = buf;
+  else if (buf instanceof ArrayBuffer) nodeBuf = Buffer.from(buf);
+  else if (ArrayBuffer.isView(buf)) nodeBuf = Buffer.from(buf.buffer);
+  else nodeBuf = Buffer.from(buf);
+  const base64 = nodeBuf.toString('base64');
+  return `data:image/png;base64,${base64}`;
+};
+
+// Helper: sanity-check a drawn region to ensure it contains both light and dark pixels
+// Returns true if looks valid (has contrast), false if mostly uniform (likely blank/black)
+const hasContrast = (ctx, x, y, w, h) => {
+  try {
+    const data = ctx.getImageData(x, y, w, h).data;
+    let min = 255, max = 0;
+    // sample every 16th pixel to reduce cost
+    for (let i = 0; i < data.length; i += 16 * 4) {
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      const l = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
+      if (l < min) min = l;
+      if (l > max) max = l;
+    }
+    return max - min > 40; // arbitrary threshold for QR black/white contrast
+  } catch (_) {
+    // If we cannot read pixels, assume valid to avoid false negatives
+    return true;
+  }
+};
 
 /**
  * Generate a professional QR code with burgundy background and Playfair font
@@ -126,6 +165,13 @@ const generateProfessionalQR = async (data, restaurantName, options = {}) => {
     ctx.shadowOffsetY = 1;
     
     ctx.fillText('POWERED BY QRUZINE', canvasWidth / 2, canvasHeight - 30);
+
+    // If the drawn QR region appears uniform (common when image decode fails silently),
+    // fall back to raw AwesomeQR output which does not require composition.
+    const valid = hasContrast(ctx, qrX, qrY, qrSize, qrSize);
+    if (!valid) {
+      return bufferToDataUrl(qrBuffer);
+    }
 
     // Convert canvas to base64
     const base64Image = canvas.toDataURL('image/png', 0.95);
@@ -502,6 +548,11 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       const qrY = panelY + innerMargin;
       ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
 
+      // Validate that the QR region actually contains black/white contrast; otherwise fallback
+      if (!hasContrast(ctx, qrX, qrY, qrSize, qrSize)) {
+        return bufferToDataUrl(qrBuffer);
+      }
+
       // Red pill CTA with two-line text
       const pillW = 520;
       const pillH = 96;
@@ -555,8 +606,7 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
     } catch (compositionErr) {
       console.warn('QR composition failed, returning base QR. Hint: install system deps for node-canvas or use @napi-rs/canvas. Error:', compositionErr?.message);
       // Fallback to raw AwesomeQR buffer as data URL
-      const base64 = Buffer.from(qrBuffer).toString('base64');
-      return `data:image/png;base64,${base64}`;
+      return bufferToDataUrl(qrBuffer);
     }
   } catch (error) {
     console.error('Minimal professional QR generation error:', error);
