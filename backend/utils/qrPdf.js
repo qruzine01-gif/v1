@@ -16,34 +16,24 @@ function dataUrlToBuffer(dataUrl) {
  * @returns {PDFDocument} readable stream (PDFKit document)
  */
 function createQrPdf({ restaurantName = 'Restaurant', qrPngDataUrl, meta = {} }) {
-  const doc = new PDFDocument({ size: 'A5', margin: 24 });
+  const doc = new PDFDocument({ size: 'A5', margin: 12 });
 
   // Meta
   doc.info.Title = `${restaurantName} QR`;
   doc.info.Author = 'Qruzine';
 
-  // Heading
-  doc.fontSize(18).font('Helvetica-Bold').text(restaurantName, { align: 'center' });
-  doc.moveDown(0.5);
-
-  // QR image
+  // Only the QR poster image
   const buf = dataUrlToBuffer(qrPngDataUrl);
   if (buf) {
-    const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    const maxHeight = 350;
+    const fitWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const fitHeight = doc.page.height - doc.page.margins.top - doc.page.margins.bottom;
     const x = doc.page.margins.left;
-    const y = doc.y;
-    doc.image(buf, x, y, { fit: [pageWidth, maxHeight], align: 'center' });
-    doc.moveDown(0.5);
+    const y = doc.page.margins.top;
+    doc.image(buf, x, y, { fit: [fitWidth, fitHeight], align: 'center' });
   } else {
     doc.fillColor('red').text('Failed to embed QR image', { align: 'center' });
     doc.fillColor('black');
   }
-
-  // Footer branding
-  doc.moveDown(1);
-  doc.font('Helvetica-Bold').fontSize(14).fillColor('#D4AF37').text('qruzine', { align: 'center' });
-  doc.fillColor('black');
 
   return doc;
 }

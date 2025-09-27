@@ -501,7 +501,7 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
 
     // Red pill CTA with two-line text
     const pillW = 520;
-    const pillH = 88;
+    const pillH = 96;
     const pillX = (canvasWidth - pillW) / 2;
     const pillY = panelY + panelH + 40;
     roundRect(pillX, pillY, pillW, pillH, 24);
@@ -513,19 +513,23 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
     ctx.fill();
     ctx.shadowColor = 'transparent';
     ctx.fillStyle = '#FFFFFF';
-    let scanSize = 44;
+    let scanSize = 32; // slight reduction to ensure it stays inside the pill
     ctx.font = `700 ${scanSize}px ${fontFamily}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     const lines = ['SCAN THE CODE', 'TO ORDER'];
-    const maxScanWidth = pillW - 40;
-    while (Math.max(...lines.map(l => ctx.measureText(l).width)) > maxScanWidth && scanSize > 26) {
+    const maxScanWidth = pillW - 80; // increase side padding for safety
+    while (Math.max(...lines.map(l => ctx.measureText(l).width)) > maxScanWidth && scanSize > 20) {
       scanSize -= 2;
       ctx.font = `700 ${scanSize}px ${fontFamily}`;
     }
-    const lh = scanSize + 6;
+    const lh = scanSize + 2; // slightly tighter line height
     const cx = canvasWidth / 2;
-    const baseY = pillY + (pillH - lh) / 2 + scanSize * 0.8 - 4;
-    ctx.fillText(lines[0], cx, baseY);
-    ctx.fillText(lines[1], cx, baseY + lh);
+    const centerY = pillY + pillH / 2;
+    // Draw lines evenly around vertical center
+    ctx.fillText(lines[0], cx, centerY - lh / 2);
+    ctx.fillText(lines[1], cx, centerY + lh / 2);
+    ctx.textBaseline = 'alphabetic';
 
     // Gold footer branding
     ctx.fillStyle = gold;
@@ -533,9 +537,9 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
     ctx.shadowBlur = 4;
     ctx.shadowOffsetX = 1;
     ctx.shadowOffsetY = 2;
-    ctx.font = `800 34px ${fontFamily}`;
+    ctx.font = `800 24px ${fontFamily}`; // slightly smaller
     ctx.fillText('POWERED BY', canvasWidth / 2, canvasHeight - 90);
-    let brandSize = 56;
+    let brandSize = 40; // slightly smaller brand
     ctx.font = `900 ${brandSize}px ${fontFamily}`;
     const maxBrand = canvasWidth - 120;
     while (ctx.measureText('QRUZINE').width > maxBrand && brandSize > 28) {

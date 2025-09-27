@@ -1,9 +1,9 @@
   "use client"
 
- import { useState } from "react"
- import { motion, AnimatePresence } from "framer-motion"
- import { CreditCard, User, Phone, CheckCircle, X, Mail, Calendar, Gift } from "lucide-react"
- import api from '../../../../../../lib/api'
+  import { useState } from "react"
+  import { motion, AnimatePresence } from "framer-motion"
+  import { CreditCard, User, Phone, CheckCircle, X, Calendar, Gift } from "lucide-react"
+  import api from '../../../../../../lib/api'
 
 export default function Checkout({ 
   isOpen, 
@@ -41,7 +41,6 @@ export default function Checkout({
         customer: {
           name: formData.name,
           phone: formData.phone,
-          email: formData.email || "guest@example.com",
           age: formData.age || undefined,
           dob: formData.dob || undefined,
         },
@@ -60,7 +59,6 @@ export default function Checkout({
         customerInfo: {
           name: payload.customer.name,
           phone: payload.customer.phone,
-          email: payload.customer.email,
           age: formData.age || undefined,
           dob: formData.dob || undefined,
           specialInstructions: formData.specialInstructions || '',
@@ -158,19 +156,6 @@ export default function Checkout({
                         type="tel"
                         value={formData.phone}
                         onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                        className="w-full px-4 py-3 md:py-3.5 rounded-lg border-2 bg-black/60 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#800020]"
-                        style={{ borderColor: '#800020' }}
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-xs md:text-sm font-medium mb-2" style={{ color: '#ffffff' }}>
-                        <Mail className="h-4 w-4 inline mr-2" />
-                        Email (Optional)
-                      </label>
-                      <input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         className="w-full px-4 py-3 md:py-3.5 rounded-lg border-2 bg-black/60 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#800020]"
                         style={{ borderColor: '#800020' }}
                       />
