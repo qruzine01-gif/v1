@@ -432,123 +432,132 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
     };
     const qrBuffer = await new AwesomeQR(qrOptions).draw();
 
-    // Canvas composition
-    const canvasWidth = 682;
-    const canvasHeight = 1024;
-    const canvas = createCanvas(canvasWidth, canvasHeight);
-    const ctx = canvas.getContext('2d');
+    // In some production environments, node-canvas system deps may be missing.
+    // If any of the composition steps fail, fall back to returning the raw QR buffer as a PNG data URL.
+    try {
+      // Canvas composition
+      const canvasWidth = 682;
+      const canvasHeight = 1024;
+      const canvas = createCanvas(canvasWidth, canvasHeight);
+      const ctx = canvas.getContext('2d');
 
     const burgundy = '#6B0D13';
     const cream = '#FFF2DC';
     const red = '#B22020';
     const gold = '#D4AF37';
 
-    // Background
-    ctx.fillStyle = burgundy;
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+      // Background
+      ctx.fillStyle = burgundy;
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    // Title
-    const title = (restaurantName || 'RESTAURANT NAME').toUpperCase();
-    ctx.fillStyle = cream;
-    ctx.textAlign = 'center';
-    let titleSize = 84;
-    ctx.font = `900 ${titleSize}px ${fontFamily}`;
-    const maxTitleWidth = canvasWidth - 80;
-    while (ctx.measureText(title).width > maxTitleWidth && titleSize > 36) {
-      titleSize -= 4;
+      // Title
+      const title = (restaurantName || 'RESTAURANT NAME').toUpperCase();
+      ctx.fillStyle = cream;
+      ctx.textAlign = 'center';
+      let titleSize = 84;
       ctx.font = `900 ${titleSize}px ${fontFamily}`;
-    }
-    ctx.shadowColor = 'rgba(0,0,0,0.25)';
-    ctx.shadowBlur = 4;
-    ctx.shadowOffsetX = 2;
-    ctx.shadowOffsetY = 2;
-    ctx.fillText(title, canvasWidth / 2, 150);
-    ctx.shadowColor = 'transparent';
+      const maxTitleWidth = canvasWidth - 80;
+      while (ctx.measureText(title).width > maxTitleWidth && titleSize > 36) {
+        titleSize -= 4;
+        ctx.font = `900 ${titleSize}px ${fontFamily}`;
+      }
+      ctx.shadowColor = 'rgba(0,0,0,0.25)';
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 2;
+      ctx.fillText(title, canvasWidth / 2, 150);
+      ctx.shadowColor = 'transparent';
 
-    // Rounded cream panel for QR
-    const panelW = 520;
-    const panelH = 520;
-    const panelX = (canvasWidth - panelW) / 2;
-    const panelY = 210;
-    const roundRect = (x, y, w, h, r) => {
-      const rr = Math.min(r, w / 2, h / 2);
-      ctx.beginPath();
-      ctx.moveTo(x + rr, y);
-      ctx.lineTo(x + w - rr, y);
-      ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
-      ctx.lineTo(x + w, y + h - rr);
-      ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
-      ctx.lineTo(x + rr, y + h);
-      ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
-      ctx.lineTo(x, y + rr);
-      ctx.quadraticCurveTo(x, y, x + rr, y);
-      ctx.closePath();
-    };
-    roundRect(panelX, panelY, panelW, panelH, 18);
-    ctx.fillStyle = cream;
-    ctx.fill();
-    ctx.lineWidth = 6;
-    ctx.strokeStyle = '#E7D7BD';
-    ctx.stroke();
+      // Rounded cream panel for QR
+      const panelW = 520;
+      const panelH = 520;
+      const panelX = (canvasWidth - panelW) / 2;
+      const panelY = 210;
+      const roundRect = (x, y, w, h, r) => {
+        const rr = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + rr, y);
+        ctx.lineTo(x + w - rr, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+        ctx.lineTo(x + w, y + h - rr);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+        ctx.lineTo(x + rr, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+        ctx.lineTo(x, y + rr);
+        ctx.quadraticCurveTo(x, y, x + rr, y);
+        ctx.closePath();
+      };
+      roundRect(panelX, panelY, panelW, panelH, 18);
+      ctx.fillStyle = cream;
+      ctx.fill();
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#E7D7BD';
+      ctx.stroke();
 
-    // Draw QR inside panel
-    const qrImage = await loadImage(qrBuffer);
-    const innerMargin = 26;
-    const qrSize = panelW - innerMargin * 2;
-    const qrX = panelX + innerMargin;
-    const qrY = panelY + innerMargin;
-    ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
+      // Draw QR inside panel
+      const qrImage = await loadImage(qrBuffer);
+      const innerMargin = 26;
+      const qrSize = panelW - innerMargin * 2;
+      const qrX = panelX + innerMargin;
+      const qrY = panelY + innerMargin;
+      ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
 
-    // Red pill CTA with two-line text
-    const pillW = 520;
-    const pillH = 96;
-    const pillX = (canvasWidth - pillW) / 2;
-    const pillY = panelY + panelH + 40;
-    roundRect(pillX, pillY, pillW, pillH, 24);
-    ctx.fillStyle = red;
-    ctx.shadowColor = 'rgba(0,0,0,0.25)';
-    ctx.shadowBlur = 6;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 3;
-    ctx.fill();
-    ctx.shadowColor = 'transparent';
-    ctx.fillStyle = '#FFFFFF';
-    let scanSize = 32; // slight reduction to ensure it stays inside the pill
-    ctx.font = `700 ${scanSize}px ${fontFamily}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const lines = ['SCAN THE CODE', 'TO ORDER'];
-    const maxScanWidth = pillW - 80; // increase side padding for safety
-    while (Math.max(...lines.map(l => ctx.measureText(l).width)) > maxScanWidth && scanSize > 20) {
-      scanSize -= 2;
+      // Red pill CTA with two-line text
+      const pillW = 520;
+      const pillH = 96;
+      const pillX = (canvasWidth - pillW) / 2;
+      const pillY = panelY + panelH + 40;
+      roundRect(pillX, pillY, pillW, pillH, 24);
+      ctx.fillStyle = red;
+      ctx.shadowColor = 'rgba(0,0,0,0.25)';
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 3;
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.fillStyle = '#FFFFFF';
+      let scanSize = 32; // slight reduction to ensure it stays inside the pill
       ctx.font = `700 ${scanSize}px ${fontFamily}`;
-    }
-    const lh = scanSize + 2; // slightly tighter line height
-    const cx = canvasWidth / 2;
-    const centerY = pillY + pillH / 2;
-    // Draw lines evenly around vertical center
-    ctx.fillText(lines[0], cx, centerY - lh / 2);
-    ctx.fillText(lines[1], cx, centerY + lh / 2);
-    ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const lines = ['SCAN THE CODE', 'TO ORDER'];
+      const maxScanWidth = pillW - 80; // increase side padding for safety
+      while (Math.max(...lines.map(l => ctx.measureText(l).width)) > maxScanWidth && scanSize > 20) {
+        scanSize -= 2;
+        ctx.font = `700 ${scanSize}px ${fontFamily}`;
+      }
+      const lh = scanSize + 2; // slightly tighter line height
+      const cx = canvasWidth / 2;
+      const centerY = pillY + pillH / 2;
+      // Draw lines evenly around vertical center
+      ctx.fillText(lines[0], cx, centerY - lh / 2);
+      ctx.fillText(lines[1], cx, centerY + lh / 2);
+      ctx.textBaseline = 'alphabetic';
 
-    // Gold footer branding
-    ctx.fillStyle = gold;
-    ctx.shadowColor = 'rgba(0,0,0,0.3)';
-    ctx.shadowBlur = 4;
-    ctx.shadowOffsetX = 1;
-    ctx.shadowOffsetY = 2;
-    ctx.font = `800 24px ${fontFamily}`; // slightly smaller
-    ctx.fillText('POWERED BY', canvasWidth / 2, canvasHeight - 90);
-    let brandSize = 40; // slightly smaller brand
-    ctx.font = `900 ${brandSize}px ${fontFamily}`;
-    const maxBrand = canvasWidth - 120;
-    while (ctx.measureText('QRUZINE').width > maxBrand && brandSize > 28) {
-      brandSize -= 2;
+      // Gold footer branding
+      ctx.fillStyle = gold;
+      ctx.shadowColor = 'rgba(0,0,0,0.3)';
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 2;
+      ctx.font = `800 24px ${fontFamily}`; // slightly smaller
+      ctx.fillText('POWERED BY', canvasWidth / 2, canvasHeight - 90);
+      let brandSize = 40; // slightly smaller brand
       ctx.font = `900 ${brandSize}px ${fontFamily}`;
-    }
-    ctx.fillText('QRUZINE', canvasWidth / 2, canvasHeight - 30);
+      const maxBrand = canvasWidth - 120;
+      while (ctx.measureText('QRUZINE').width > maxBrand && brandSize > 28) {
+        brandSize -= 2;
+        ctx.font = `900 ${brandSize}px ${fontFamily}`;
+      }
+      ctx.fillText('QRUZINE', canvasWidth / 2, canvasHeight - 30);
 
-    return canvas.toDataURL('image/png', 0.95);
+      return canvas.toDataURL('image/png', 0.95);
+    } catch (compositionErr) {
+      console.warn('QR composition failed, returning base QR. Hint: install system deps for node-canvas or use @napi-rs/canvas. Error:', compositionErr?.message);
+      // Fallback to raw AwesomeQR buffer as data URL
+      const base64 = Buffer.from(qrBuffer).toString('base64');
+      return `data:image/png;base64,${base64}`;
+    }
   } catch (error) {
     console.error('Minimal professional QR generation error:', error);
     throw new Error('Failed to generate minimal professional QR');

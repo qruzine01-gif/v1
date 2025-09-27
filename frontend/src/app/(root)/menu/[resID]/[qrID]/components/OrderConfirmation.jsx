@@ -110,7 +110,7 @@ export default function OrderConfirmation({ isOpen, onClose, orderData }) {
 
           <div className="space-y-3">
             <p className="text-xs text-gray-400 leading-relaxed" style={{ opacity: 0.7 }}>
-              We'll send your confirmation and updates to {orderData.customerInfo.email || 'your email'} and {orderData.customerInfo.phone}.
+              We'll send your confirmation and updates to your phone number {orderData.customerInfo.phone}.
             </p>
 
             <button

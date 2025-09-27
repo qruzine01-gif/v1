@@ -35,12 +35,21 @@ export default function Checkout({
         }
       })
 
+      // Generate a hidden/synthesized email to satisfy backend validation
+      // Prefer phone; fallback to sanitized name + timestamp
+      const phoneDigits = String(formData.phone || '').replace(/\D+/g, '')
+      const baseLocal = phoneDigits
+        ? phoneDigits
+        : String(formData.name || 'guest').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now()
+      const computedEmail = `${baseLocal}@guest.qruzine`
+
       const payload = {
         resID,
         qrID,
         customer: {
           name: formData.name,
           phone: formData.phone,
+          email: computedEmail,
           age: formData.age || undefined,
           dob: formData.dob || undefined,
         },
@@ -59,6 +68,7 @@ export default function Checkout({
         customerInfo: {
           name: payload.customer.name,
           phone: payload.customer.phone,
+          email: payload.customer.email,
           age: formData.age || undefined,
           dob: formData.dob || undefined,
           specialInstructions: formData.specialInstructions || '',
