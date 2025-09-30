@@ -65,7 +65,7 @@ const generateQRCodeBuffer = async (data, options = {}) => {
 }
 
 // Generate menu URL for QR code
-const generateMenuURL = (resID, qrID, baseURL = process.env.FRONTEND_URL || "http://localhost:3000") => {
+const generateMenuURL = (resID, qrID, baseURL = "https://qruzine.com") => {
   return `${baseURL}/menu/${resID}/${qrID}`
 }
 

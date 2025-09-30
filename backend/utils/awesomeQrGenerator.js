@@ -40,13 +40,15 @@ const hasContrast = (ctx, x, y, w, h) => {
 };
 
 // Helper: wrap text into lines that fit within maxWidth using the current ctx.font
-const wrapTextLines = (ctx, text, maxWidth) => {
+// Optionally provide a transform (e.g., toUpperCase) applied before measuring
+const wrapTextLines = (ctx, text, maxWidth, transform = (s) => s) => {
   const words = text.split(/\s+/).filter(Boolean);
   const lines = [];
   let current = '';
   for (const w of words) {
     const test = current ? current + ' ' + w : w;
-    if (ctx.measureText(test).width <= maxWidth) {
+    const measured = transform(test);
+    if (ctx.measureText(measured).width <= maxWidth) {
       current = test;
     } else {
       if (current) lines.push(current);
@@ -68,14 +70,17 @@ const drawWrappedCentered = (ctx, text, options) => {
     initialSize = 84,
     minSize = 28,
     maxLines = 2,
+    transform = (s) => s.toUpperCase(),
   } = options;
 
   let size = initialSize;
   let lines = [];
   while (size >= minSize) {
     ctx.font = `${weight} ${size}px ${fontFamily}`;
-    lines = wrapTextLines(ctx, text, maxWidth);
-    if (lines.length <= maxLines) break;
+    lines = wrapTextLines(ctx, text, maxWidth, transform);
+    // Ensure each line (after transform) fits maxWidth
+    const widest = Math.max(...lines.map(l => ctx.measureText(transform(l)).width));
+    if (lines.length <= maxLines && widest <= maxWidth) break;
     size -= 2;
   }
   if (lines.length > maxLines) {
@@ -89,7 +94,7 @@ const drawWrappedCentered = (ctx, text, options) => {
   ctx.textBaseline = 'alphabetic';
   lines.forEach((line, idx) => {
     const y = centerY - totalHeight / 2 + idx * lineHeight;
-    ctx.fillText(line.toUpperCase(), centerX, y);
+    ctx.fillText(transform(line), centerX, y);
   });
   return size;
 };
@@ -557,13 +562,14 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       ctx.shadowOffsetY = 2;
       drawWrappedCentered(ctx, title, {
         centerX: canvasWidth / 2,
-        centerY: 140,
-        maxWidth: canvasWidth - 100,
+        centerY: 146,
+        maxWidth: canvasWidth - 160,
         fontFamily,
         weight: '900',
-        initialSize: 72,
-        minSize: 24,
+        initialSize: 64,
+        minSize: 20,
         maxLines: 2,
+        transform: (s) => s.toUpperCase(),
       });
       ctx.shadowColor = 'transparent';
 
