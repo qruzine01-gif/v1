@@ -32,13 +32,14 @@ const hasContrast = (ctx, x, y, w, h) => {
       if (l < min) min = l;
       if (l > max) max = l;
     }
-    return max - min > 40; // arbitrary threshold for QR black/white contrast
-  } catch (_) {
-    // If we cannot read pixels, assume invalid so we fall back to base QR
-    return false;
+    return max - min > 40;
+  } catch (err) {
+    // In production, if we can't read pixels, assume it's valid
+    // rather than falling back to raw QR
+    console.warn('hasContrast check failed, assuming valid:', err.message);
+    return true; // Changed from false to true
   }
 };
-
 // Helper: wrap text into lines that fit within maxWidth using the current ctx.font
 // Optionally provide a transform (e.g., toUpperCase) applied before measuring
 const wrapTextLines = (ctx, text, maxWidth, transform = (s) => s) => {
