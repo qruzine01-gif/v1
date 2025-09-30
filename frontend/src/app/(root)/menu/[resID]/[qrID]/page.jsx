@@ -93,15 +93,14 @@ export default function Page() {
     return () => { isMounted = false }
   }, [resID, qrID])
 
-  // Persist cart to localStorage so refresh doesn't clear it
   const storageKey = useMemo(() => (resID && qrID ? `qr_cart_${resID}_${qrID}` : null), [resID, qrID])
   const prefKey = useMemo(() => (resID && qrID ? `qr_pref_${resID}_${qrID}` : null), [resID, qrID])
 
-  // Hydrate cart from localStorage when resID/qrID become available
+  // Hydrate cart from sessionStorage when resID/qrID become available
   useEffect(() => {
     if (!storageKey) return
     try {
-      const raw = localStorage.getItem(storageKey)
+      const raw = sessionStorage.getItem(storageKey)
       if (raw) {
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed)) {
@@ -113,6 +112,7 @@ export default function Page() {
     }
   }, [storageKey])
 
+
   // Load saved diet preference and show the prompt on each load (pre-filled)
   useEffect(() => {
     if (!prefKey) return
@@ -120,9 +120,7 @@ export default function Page() {
       const saved = localStorage.getItem(prefKey)
       if (saved) {
         setDietPreference(saved)
-        // Sync legacy vegOnly with saved preference
         setVegOnly(saved === 'veg')
-        // Always show the prompt so user confirms/changes each visit
         setShowPrefPrompt(true)
       } else {
         // show prompt on first load for this QR
@@ -133,30 +131,15 @@ export default function Page() {
     }
   }, [prefKey])
 
-  // Save cart to localStorage whenever it changes
+  // Save cart to sessionStorage whenever it changes
   useEffect(() => {
     if (!storageKey) return
     try {
-      localStorage.setItem(storageKey, JSON.stringify(cartItems))
+      sessionStorage.setItem(storageKey, JSON.stringify(cartItems))
     } catch (e) {
       console.warn('Failed to save cart to storage', e)
     }
   }, [cartItems, storageKey])
-
-  // Cart Functions
-  const addToCart = (item) => {
-    setCartItems(prev => {
-      const existing = prev.find(cartItem => cartItem.id === item.id)
-      if (existing) {
-        return prev.map(cartItem => 
-          cartItem.id === item.id 
-            ? { ...cartItem, quantity: cartItem.quantity + 1 }
-            : cartItem
-        )
-      }
-      return [...prev, { ...item, quantity: 1 }]
-    })
-  }
 
   const updateQuantity = (id, quantity) => {
     if (quantity === 0) {
