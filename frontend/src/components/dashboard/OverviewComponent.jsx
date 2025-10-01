@@ -7,7 +7,8 @@ import {
   TrendingUp,
   ChefHat,
   QrCode,
-  AlertCircle
+  AlertCircle,
+  IndianRupee
 } from 'lucide-react';
 import apiService from '../../lib/api';
 
@@ -87,7 +88,7 @@ const OverviewComponent = ({ resID }) => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center">
-            <DollarSign className="h-8 w-8 text-green-500" />
+          <IndianRupee className="h-8 w-8 text-green-500" />
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Today's Revenue</p>
               <p className="text-2xl font-bold text-gray-900">₹{stats.revenue.today.toLocaleString()}</p>

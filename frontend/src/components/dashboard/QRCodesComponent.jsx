@@ -68,7 +68,7 @@ const QRCodesComponent = ({ resID }) => {
         // New items should be live by default for immediate verification
         isActive: true,
         // Include menu URL for quick testing/opening
-        menuURL: createdPayload.menuURL || `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'}/menu/${resID}/${createdPayload.qrID}`,
+        menuURL: createdPayload.menuURL || `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://qruzine.com'}/menu/${resID}/${createdPayload.qrID}`,
         createdAt: createdPayload.createdAt || new Date().toISOString(),
       };
       // Prepend so it appears at the top immediately
@@ -170,7 +170,7 @@ const QRCodesComponent = ({ resID }) => {
 QR Code: ${qrCode.qrID}
 Type: ${qrCode.type}
 Description: ${qrCode.description}
-Menu URL: ${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'}/menu/${resID}/${qrCode.qrID}
+Menu URL: ${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://qruzine.com'}/menu/${resID}/${qrCode.qrID}
 
 
       `;
@@ -518,7 +518,7 @@ Menu URL: ${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'}/men
                 <p className="text-sm text-gray-600 mb-2">Scan with your phone or open the menu link to verify it is live:</p>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <a
-                    href={previewQR.menuURL || `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'}/menu/${resID}/${previewQR.qrID}`}
+                    href={previewQR.menuURL || `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://qruzine.com'}/menu/${resID}/${previewQR.qrID}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
@@ -528,7 +528,7 @@ Menu URL: ${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'}/men
                   <button
                     onClick={async () => {
                       try {
-                        const url = previewQR.menuURL || `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'}/menu/${resID}/${previewQR.qrID}`;
+                        const url = previewQR.menuURL || `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://qruzine.com'}/menu/${resID}/${previewQR.qrID}`;
                         await navigator.clipboard.writeText(url);
                         alert('Menu link copied to clipboard');
                       } catch (e) {
@@ -541,7 +541,7 @@ Menu URL: ${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'}/men
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 mt-2 break-all">
-                  {previewQR.menuURL || `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'}/menu/${resID}/${previewQR.qrID}`}
+                  {previewQR.menuURL || `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://qruzine.com'}/menu/${resID}/${previewQR.qrID}`}
                 </p>
               </div>
             </div>

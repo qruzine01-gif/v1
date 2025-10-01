@@ -4,11 +4,15 @@ export default function Footer({ restaurant }) {
   const addressParts = [
     restaurant?.location?.address,
     restaurant?.location?.area,
-    restaurant?.location?.city,
     restaurant?.location?.state,
     restaurant?.location?.pincode,
   ].filter(Boolean)
   const year = new Date().getFullYear()
+  const websiteHref = restaurant?.contactInfo?.website
+    ? (restaurant.contactInfo.website.startsWith('http://') || restaurant.contactInfo.website.startsWith('https://')
+        ? restaurant.contactInfo.website
+        : `https://${restaurant.contactInfo.website}`)
+    : undefined
 
   return (
     <footer className="border-t-2 mt-12" style={{ backgroundColor: 'rgba(212, 175, 55, 0.05)', borderColor: 'rgb(212, 175, 55)' }}>
@@ -44,7 +48,7 @@ export default function Footer({ restaurant }) {
                 <Globe className="h-4 w-4" style={{ color: 'rgb(212, 175, 55)' }} />
                 {restaurant?.contactInfo?.website ? (
                   <a
-                    href={restaurant.contactInfo.website}
+                    href={websiteHref}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-gray-300 hover:text-white transition-colors"
@@ -70,8 +74,52 @@ export default function Footer({ restaurant }) {
         <div className="border-t mt-6 pt-6 text-center" style={{ borderColor: 'rgba(212, 175, 55, 0.3)' }}>
           <p className="text-sm text-gray-400">© {year} {restaurant?.name || 'Restaurant'}. All rights reserved.</p>
           <p className="text-xs text-gray-500 mt-1">Powered by <span className="font-semibold" style={{ color: 'rgb(212, 175, 55)' }}>Qruzine</span></p>
+          <p className="text-xs text-gray-500 mt-1">
+            <a
+              href="https://www.vigyapanwala.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold hover:underline vw-anim"
+            >
+              Vigyapanwala product
+            </a>
+          </p>
         </div>
       </div>
+      <style jsx>{`
+        .vw-anim {
+          background: linear-gradient(90deg,
+            #a67c00 0%,
+            #d4af37 20%,
+            #fff1a8 40%,
+            #d4af37 60%,
+            #8b6b00 80%,
+            #d4af37 100%
+          );
+          background-size: 300% 100%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          animation: vw-shimmer 4s ease-in-out infinite;
+          text-decoration-color: rgba(212,175,55,0.9);
+          filter: drop-shadow(0 0 1px rgba(212,175,55,0.45));
+          letter-spacing: 0.2px;
+        }
+
+        .vw-anim:hover {
+          filter: drop-shadow(0 0 3px rgba(212,175,55,0.65));
+        }
+
+        @keyframes vw-shimmer {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .vw-anim { animation: none; background-position: 100% 50%; }
+        }
+      `}</style>
     </footer>
   )
 }
