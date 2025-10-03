@@ -1,4 +1,5 @@
 import React from "react";
+import { redirect } from 'next/navigation';
 import Hero from "../../../components/landing/Hero";
 import Features from "../../../components/landing/Features";
 import ScreensShowcase from "../../../components/landing/ScreensShowcase";
@@ -68,21 +69,5 @@ export const metadata = {
 };
 
 export default function LandingPage() {
-  const structuredData = generateStructuredData();
-  
-  return (
-    <>
-      
-      <main className="min-h-screen bg-background-primary/5">
-        <Hero />
-        <Features />
-        <ScreensShowcase />
-        <CTA />
-        {/* Anchors for footer quick links */}
-        <div id="pricing" className="h-0" aria-hidden="true" />
-        <div id="contact" className="h-0" aria-hidden="true" />
-        <Footer />
-      </main>
-    </>
-  );
+  redirect('/');
 }

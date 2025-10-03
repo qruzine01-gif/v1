@@ -45,7 +45,7 @@ export default function Footer() {
     {
       title: "Quick Links",
       links: [
-        { name: "Home", href: "/landing" },
+        { name: "Home", href: "/" },
         { name: "Features", href: "#features" },
         { name: "Pricing", href: "#pricing" },
         { name: "Contact", href: "/landing/contact" },

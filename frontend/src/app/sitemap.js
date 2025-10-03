@@ -9,10 +9,6 @@ export default function sitemap() {
         lastModified: new Date(),
       },
       {
-        url: 'https://qruzine.com/landing',
-        lastModified: new Date(),
-      },
-      {
         url: 'https://qruzine.com/landing/privacy',
         lastModified: new Date(),
       },
@@ -22,4 +18,3 @@ export default function sitemap() {
       },
     ]
   }
-  
