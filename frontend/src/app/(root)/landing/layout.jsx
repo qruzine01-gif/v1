@@ -25,7 +25,7 @@ const poppins = Poppins({
 export const metadata = {
   ...siteConfig,
   title: {
-    template: '%s | Qruzine',
+    template: '%s',
     default: siteConfig.title,
   },
 };
