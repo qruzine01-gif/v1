@@ -39,7 +39,7 @@ export default function Features() {
   return (
     <section id="features" className="bg-background-primary/10 py-16 md:py-20">
       <div className="mx-auto max-w-7xl px-6">
-        <h2 className="heading-2 gradient-text mb-2">Built for Restaurants</h2>
+        <h2 className="heading-2 restaurant-gradient-text-strong text-outline-dark mb-2">Built for Restaurants</h2>
         <p className="elegant-text-muted max-w-2xl mb-10">
           Qruzine is a full QR-based ordering product by Vigyapanwala, engineered for enterprise reliability and delightful dining experiences.
         </p>

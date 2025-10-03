@@ -47,6 +47,11 @@ const OrdersComponent = ({ resID }) => {
       // ignore
     }
   };
+
+  // Always keep a ref to the latest fetchOrders so socket handlers don't capture stale closures
+  useEffect(() => {
+    fetchOrdersRef.current = fetchOrders;
+  });
   const [filters, setFilters] = useState({
     status: '',
     qrID: '',
@@ -57,6 +62,8 @@ const OrdersComponent = ({ resID }) => {
   });
   const [pagination, setPagination] = useState({});
   const [summary, setSummary] = useState({});
+  const [newOrderIds, setNewOrderIds] = useState(new Set());
+  const fetchOrdersRef = useRef(null);
 
   useEffect(() => {
     fetchOrders();
@@ -107,7 +114,10 @@ const OrdersComponent = ({ resID }) => {
 
     const socket = io(serverUrl, {
       withCredentials: true,
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'], // allow fallback for mobile/network/reverse-proxy
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
     });
 
     socketRef.current = socket;
@@ -117,12 +127,35 @@ const OrdersComponent = ({ resID }) => {
       socket.emit('joinRestaurant', resID);
     });
 
+    socket.on('connect_error', (err) => {
+      console.warn('[socket] connect_error', err?.message);
+    });
+    socket.on('error', (err) => {
+      console.warn('[socket] error', err);
+    });
+
     // When a new order is created for this restaurant
     socket.on('order:created', (payload) => {
       // Basic guard
       if (!payload || payload.resID !== resID) return;
       // Refresh silently to respect current filters/pagination
-      fetchOrders(true);
+      fetchOrdersRef.current?.(true);
+      // Mark as NEW for a short period
+      try {
+        setNewOrderIds(prev => {
+          const next = new Set(prev);
+          next.add(payload.orderID);
+          return next;
+        });
+        // Auto-expire the NEW badge after 3 minutes
+        setTimeout(() => {
+          setNewOrderIds(prev => {
+            const next = new Set(prev);
+            next.delete(payload.orderID);
+            return next;
+          });
+        }, 180000);
+      } catch (_) {}
       toast.success(`New order #${payload.orderID} at ${payload.qrName || payload.qrID}`, {
         description: `Amount: ₹${payload.totalAmount} • ETA: ${payload.estimatedTime} min`,
       });
@@ -137,7 +170,7 @@ const OrdersComponent = ({ resID }) => {
         const idx = prev.findIndex(o => o.orderID === update.orderID);
         if (idx === -1) {
           // Not in current page, do a silent refresh to update counts/status badges
-          fetchOrders(true);
+          fetchOrdersRef.current?.(true);
           return prev;
         }
         const next = [...prev];
@@ -304,8 +337,78 @@ const OrdersComponent = ({ resID }) => {
         </div>
       )}
 
-      {/* Orders Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      {/* Orders - Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {orders.map((order) => (
+          <div
+            key={order._id}
+            className={`rounded-lg shadow-md p-4 bg-white ${order.status === 'Pending' ? 'border-l-4 border-yellow-400' : ''} ${newOrderIds.has(order.orderID) ? 'ring-2 ring-green-400' : ''}`}
+          >
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-base font-semibold text-gray-900">#{order.orderID}</div>
+                {newOrderIds.has(order.orderID) && (
+                  <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-green-100 text-green-800">NEW</span>
+                )}
+                <div className="text-xs text-gray-600 flex items-center gap-1 mt-1">
+                  <MapPin className="h-3 w-3" /> {order.qrName || order.qrID}
+                </div>
+                <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                  <Clock className="h-3 w-3" /> {new Date(order.createdAt).toLocaleString()}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                  {order.status}
+                </div>
+                <div className="text-sm font-semibold text-gray-900 mt-1">₹{order.totalAmount}</div>
+                {order.estimatedTime && (
+                  <div className="text-xs text-gray-500 mt-0.5">ETA: {order.estimatedTime}min</div>
+                )}
+              </div>
+            </div>
+
+            {order.items?.length > 0 && (
+              <div className="mt-3 text-sm text-gray-800">
+                {order.items.slice(0, 4).map((item, idx) => (
+                  <div key={idx} className="flex justify-between text-sm">
+                    <span className="text-gray-700">{item.quantity}x {item.name}</span>
+                  </div>
+                ))}
+                {order.items.length > 4 && (
+                  <div className="text-xs text-gray-500 mt-1">+{order.items.length - 4} more items</div>
+                )}
+              </div>
+            )}
+
+            {order.specialRequest && (
+              <div className="text-xs text-orange-600 mt-2">Note: {order.specialRequest}</div>
+            )}
+
+            <div className="mt-3 flex items-center justify-between">
+              <div className="text-xs text-gray-500 flex items-center gap-1">
+                <User className="h-3 w-3" /> {order.customer?.name || 'N/A'}
+              </div>
+              {order.status !== 'Delivered' && order.status !== 'Cancelled' && (
+                <button
+                  onClick={() => updateOrderStatus(order.orderID, getNextStatus(order.status))}
+                  disabled={updating[order.orderID]}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs disabled:opacity-50"
+                >
+                  {updating[order.orderID] ? (
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                  ) : (
+                    `→ ${getNextStatus(order.status)}`
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Orders Table (Desktop) */}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden hidden md:block">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">
             Orders ({pagination.totalItems || 0})
@@ -338,10 +441,18 @@ const OrdersComponent = ({ resID }) => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {orders.map((order) => (
-                <tr key={order._id} className="hover:bg-gray-50">
+                <tr
+                  key={order._id}
+                  className={`hover:bg-gray-50 ${order.status === 'Pending' ? 'bg-yellow-50' : ''}`}
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">#{order.orderID}</div>
+                      <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                        <span>#{order.orderID}</span>
+                        {newOrderIds.has(order.orderID) && (
+                          <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-green-100 text-green-800">NEW</span>
+                        )}
+                      </div>
                       <div className="text-sm text-gray-500 flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
                         {order.qrName || order.qrID}

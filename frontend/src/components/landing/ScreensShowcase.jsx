@@ -4,7 +4,7 @@ import Image from "next/image";
 import { LayoutDashboard, ShoppingCart, QrCode, Utensils, CheckCircle, ListChecks, List } from "lucide-react";
 
 export default function ScreensShowcase() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('restaurantMenu');
 
   const screens = {
     restaurantMenu: {
@@ -16,7 +16,11 @@ export default function ScreensShowcase() {
         "Category-based menu organization",
         "High-quality food images",
         "Item details and customization",
-        "Add to cart with one tap"
+        "Add to cart with one tap",
+        "Search and dietary filters",
+        "Recommended and combo deals",
+        "Allergen and nutrition labels",
+        "Multi-language support"
       ]
     },
     checkout: {
@@ -28,7 +32,11 @@ export default function ScreensShowcase() {
         "Secure payment processing",
         "Split bills functionality",
         "Order summary and modifications",
-        "Multiple payment methods"
+        "Multiple payment methods",
+        "Tip suggestions and receipt email",
+        "Saved cards and popular wallets",
+        "Promo codes and discounts",
+        "GST/Tax calculation and invoice generation"
       ]
     },
     orderComplete: {
@@ -40,7 +48,11 @@ export default function ScreensShowcase() {
         "Order confirmation details",
         "Estimated preparation time",
         "Order tracking information",
-        "Customer feedback options"
+        "Customer feedback options",
+        "Live status notifications",
+        "Download/print receipt",
+        "Reorder in one tap",
+        "Support chat or contact options"
       ]
     },
     overview: {
@@ -52,7 +64,11 @@ export default function ScreensShowcase() {
         "Real-time sales and revenue tracking",
         "Popular items and categories",
         "Daily, weekly, and monthly performance metrics",
-        "Quick access to important functions"
+        "Quick access to important functions",
+        "Low-stock and wastage alerts",
+        "Peak hour heatmaps",
+        "Staff performance insights",
+        "Exportable reports (CSV/PDF)"
       ]
     },
     orders: {
@@ -64,7 +80,11 @@ export default function ScreensShowcase() {
         "Real-time order tracking",
         "Table status and management",
         "Order history and receipts",
-        "Kitchen display system (KOT) integration"
+        "Kitchen display system (KOT) integration",
+        "Notify kitchen with priorities",
+        "Merge/split orders",
+        "Hold and resume tickets",
+        "Auto-assign orders to staff"
       ]
     },
     qr: {
@@ -76,7 +96,11 @@ export default function ScreensShowcase() {
         "Generate unlimited QR codes",
         "Table-specific QR codes",
         "Track QR code scans",
-        "Dynamic menu linking"
+        "Dynamic menu linking",
+        "Branded QR designs",
+        "Batch print/export options",
+        "Expire or disable codes",
+        "Short links and deep-linking"
       ]
     },
     menu: {
@@ -88,7 +112,11 @@ export default function ScreensShowcase() {
         "Create and organize menu categories",
         "Add/Edit/Remove items with images",
         "Set availability and timings",
-        "Manage pricing and variations"
+        "Manage pricing and variations",
+        "Bulk import via CSV",
+        "Drag-and-drop item sorting",
+        "Modifiers and add-ons",
+        "Nutrition and allergen tags"
       ]
     }
   };
@@ -114,7 +142,7 @@ export default function ScreensShowcase() {
       </div>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+          <h2 className="text-3xl font-bold restaurant-gradient-text-strong sm:text-4xl">
             Restaurant Management Platform
           </h2>
           <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
@@ -147,10 +175,10 @@ export default function ScreensShowcase() {
           </div>
 
           {/* Tab Content */}
-          <div className="p-6 md:p-8">
+          <div className="p-4 md:p-8">
             <div className="grid md:grid-cols-2 gap-8 items-center">
               <div className="space-y-6">
-                <h3 className="text-2xl font-bold text-gray-900">{currentScreen.title}</h3>
+                <h3 className="text-2xl font-bold restaurant-gradient-text-strong">{currentScreen.title}</h3>
                 <p className="text-gray-600">{currentScreen.description}</p>
                 
                 <ul className="space-y-3">

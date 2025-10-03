@@ -226,9 +226,9 @@ Menu URL: ${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://qruzine.com'}/menu/
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">QR Code Management</h2>
-        <div className="flex gap-2">
+      <div className="flex justify-between mt-8 items-center">
+        
+        <div className="flex gap-3 pl-2">
           <button
             onClick={fetchQRCodes}
             disabled={loading}

@@ -85,7 +85,7 @@ const OverviewComponent = ({ resID }) => {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 mt-2  md:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center">
           <IndianRupee className="h-8 w-8 text-green-500" />

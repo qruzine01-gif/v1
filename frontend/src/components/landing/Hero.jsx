@@ -12,8 +12,8 @@ export default function Hero() {
         <div className="absolute -bottom-24 -left-24 w-72 h-72 md:w-[28rem] md:h-[28rem] rounded-full bg-forest-700/20 blur-3xl" />
       </div>
 
-      {/* Restaurant Owner Button - Hidden on smallest screens, visible from sm breakpoint */}
-      <div className="hidden sm:block absolute top-6 right-6 z-10">
+      {/* Restaurant Owner Button - Visible across all breakpoints */}
+      <div className="absolute top-3 right-3 sm:top-6 sm:right-6 z-10">
         <Link 
           href="/login" 
           className="group flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white text-sm font-medium hover:bg-white/20 transition-colors duration-200"
@@ -22,19 +22,8 @@ export default function Hero() {
           <LogIn className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
         </Link>
       </div>
-      
-      {/* Mobile-friendly button - visible only on small screens */}
-      <div className="sm:hidden fixed bottom-6 right-6 z-50">
-        <Link 
-          href="/login" 
-          className="flex items-center justify-center w-14 h-14 rounded-full bg-bronze-600 text-white shadow-lg hover:bg-bronze-700 transition-colors duration-200"
-          aria-label="Restaurant Owner Login"
-        >
-          <LogIn className="h-6 w-6" />
-        </Link>
-      </div>
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 md:pt-24 lg:pt-28 pb-12 sm:pb-16 md:pb-20 lg:pb-24">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-24 sm:pt-24 md:pt-28 lg:pt-32 pb-12 sm:pb-16 md:pb-20 lg:pb-24">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
           <div className="text-center lg:text-left space-y-4 sm:space-y-6">
             <span className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm text-white px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium tracking-wide mx-auto lg:mx-0">
@@ -43,7 +32,7 @@ export default function Hero() {
             </span>
 
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight">
-              <span className="block text-3xl sm:text-4xl md:text-5xl lg:text-6xl">Vigyapanwala's</span>
+              <span className="block">Vigyapanwala's</span>
               <span className="text-bronze-400 block mt-2">Qruzine Platform</span>
             </h1>
             

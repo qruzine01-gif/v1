@@ -436,9 +436,9 @@ const MenuComponent = ({ resID }) => {
   return (
     <div className="space-y-6">
       {/* Header and Filters */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-900">Menu Management</h2>
-        <div className="flex gap-2">
+      <div className="flex flex-col mt-4 sm:flex-row justify-between items-start sm:items-center gap-4">
+        
+        <div className="flex gap-3 pl-2">
           <button
             onClick={() => setShowCategoryManager(true)}
             className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"

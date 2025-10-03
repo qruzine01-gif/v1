@@ -54,47 +54,74 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 // Define basic metadata in layout - Twitter card will be handled in page components
-export const metadata = {
-  title: {
-    template: '%s | Qruzine',
-    default: 'Qruzine - Digital Ordering System',
-  },
-  description: 'Transform your restaurant with Qruzine\'s digital ordering system. Increase sales, improve efficiency, and enhance customer experience.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://qruzine.com'),
-  viewport: 'width=device-width, initial-scale=1',
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#ffffff' },
     { media: '(prefers-color-scheme: dark)', color: '#000000' },
   ],
-  icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png',
+};
+
+export const metadata = {
+  title: {
+    template: '%s | Qruzine',
+    default: 'Qruzine - Digital QR Menu & Ordering System',
   },
-  manifest: '/site.webmanifest',
+  description:
+    "Qruzine is a modern digital ordering system for restaurants. Create QR menus, manage orders, and boost customer experience with ease.",
+  keywords: [
+    "Qruzine",
+    "digital menu",
+    "QR code menu",
+    "restaurant ordering system",
+    "online food ordering",
+    "contactless dining",
+  ],
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://qruzine.com"),
+  viewport: "width=device-width, initial-scale=1",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+  ],
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon-16x16.png",
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/site.webmanifest",
   openGraph: {
-    title: 'Qruzine - Digital Ordering System for Restaurants',
-    description: 'Transform your restaurant with our digital ordering system. Increase sales and improve efficiency.',
-    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://qruzine.com',
-    siteName: 'Qruzine',
+    title: "Qruzine - Digital Ordering System for Restaurants",
+    description:
+      "Qruzine helps restaurants go digital with QR menus and smart ordering. Improve efficiency and enhance customer experience.",
+    url: process.env.NEXT_PUBLIC_SITE_URL || "https://qruzine.com",
+    siteName: "Qruzine",
     images: [
       {
-        url: '/images/logo.png',
-        width: 800,
-        height: 800,
-        alt: 'Qruzine Digital Ordering System',
+        url: "/images/og-image.jpg", // Create a clean OG image with your logo + tagline
+        width: 1200,
+        height: 630,
+        alt: "Qruzine - Digital QR Menu",
       },
     ],
-    locale: 'en_US',
-    type: 'website',
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Qruzine - Digital QR Menu & Ordering System",
+    description:
+      "Go contactless with Qruzine. Digital QR menus for restaurants with smart ordering.",
+    images: ["/images/og-image.jpg"],
+    creator: "@qruzine", // if you make a Twitter handle
   },
 };
+
 
 export default function RootLayout({ children, modal }) {
   return (
     <html lang="en" className={`${inter.variable} font-sans`} suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#ffffff" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>

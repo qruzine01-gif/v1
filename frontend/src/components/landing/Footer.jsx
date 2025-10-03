@@ -2,6 +2,9 @@
 import React from "react";
 import Link from "next/link";
 import { Mail, Phone, MapPin, Clock, Globe } from "lucide-react";
+import { Playfair_Display } from "next/font/google";
+
+const playfair = Playfair_Display({ subsets: ["latin"], weight: ["700", "800"] });
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -63,13 +66,17 @@ export default function Footer() {
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
           <div className="space-y-4">
-            <div className="modern-ui-text">
-              <span className="text-2xl font-bold text-white">Qruzine</span>
-              <span className="ml-2 text-bronze-300 font-semibold">by Vigyapanwala</span>
-            </div>
-            <p className="text-gray-300 font-medium leading-relaxed">
+          <div className="modern-ui-text flex items-baseline gap-2">
+  <span className={`${playfair.className} restaurant-gradient-text-strong text-outline-dark text-3xl md:text-4xl font-extrabold tracking-wide`}>
+    Qruzine
+  </span>
+  <span className="restaurant-gradient-text-strong text-outline-dark text-sm md:text-base font-semibold">
+    by Vigyapanwala
+  </span>
+</div>
+            <p className="font-medium leading-relaxed">
               <span className="block text-white font-bold text-lg mb-1">Built for Restaurants</span>
-              <span>Qruzine is a full QR-based ordering product by Vigyapanwala, engineered for enterprise reliability and delightful dining experiences.</span>
+              <span className="elegant-text-muted">Qruzine is a full QR-based ordering product by Vigyapanwala, engineered for enterprise reliability and delightful dining experiences.</span>
             </p>
             <div className="flex items-center space-x-4 pt-2">
               <a href="#" className="text-gray-400 hover:text-bronze-400 transition-colors">
@@ -140,7 +147,7 @@ export default function Footer() {
                 Cookie Policy
               </Link>
               <span className="text-sm text-gray-400 border border-gray-700 rounded-full px-3 py-1 leading-none">
-                Made by <span className="text-white font-medium ml-1">Zentrix</span>
+                Made by <span className="text-color-burgundy-deep font-medium ml-1">Zentrix</span>
               </span>
             </div>
           </div>

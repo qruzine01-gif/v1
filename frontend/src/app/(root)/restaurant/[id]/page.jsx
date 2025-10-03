@@ -151,9 +151,9 @@ const RestaurantDashboard = ({ params }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col overflow-x-hidden">
       {/* Mobile Header */}
-      <div className="md:hidden bg-white shadow-sm border-b sticky top-0 z-10">
+      <div className="md:hidden bg-white shadow-sm border-b sticky top-0 z-10 safe-top safe-x">
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center">
             <button 
@@ -281,7 +281,7 @@ const RestaurantDashboard = ({ params }) => {
       <div className="flex flex-1 overflow-hidden">
         {/* Mobile Sidebar */}
         <div 
-          className={`fixed inset-y-0 left-0 transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:hidden z-30 w-64 bg-white shadow-lg transition-transform duration-300 ease-in-out`}
+          className={`fixed inset-y-0 left-0 transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:hidden z-30 w-64 max-w-[85vw] bg-white shadow-lg transition-transform duration-300 ease-in-out`}
         >
           <div className="h-full flex flex-col">
             <div className="p-4 border-b border-gray-200">
@@ -360,9 +360,9 @@ const RestaurantDashboard = ({ params }) => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-auto focus:outline-none">
+        <div className="min-w-0 flex-1 overflow-auto focus:outline-none">
           {/* Mobile tab indicator */}
-          <div className="md:hidden bg-white border-b sticky top-14 z-10">
+          <div className="md:hidden bg-white border-b sticky top-2 z-10">
             <div className="px-4 py-2 flex items-center overflow-x-auto scrollbar-hide">
               <button
                 onClick={() => {
@@ -401,7 +401,7 @@ const RestaurantDashboard = ({ params }) => {
           </div>
           
           {/* Content */}
-          <div className="p-4 md:p-6 max-w-7xl mx-auto w-full">
+          <div className="p-0 md:p-2 max-w-7xl mx-auto w-full">
             {renderTabContent()}
           </div>
         </div>
