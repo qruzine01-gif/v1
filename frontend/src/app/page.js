@@ -7,7 +7,7 @@ export default function Page() {
   const router = useRouter();
 
   const handleSplashComplete = () => {
-    router.push('/login');
+    router.push('/landing');
   };
 
   return <SplashScreen onComplete={handleSplashComplete} />;

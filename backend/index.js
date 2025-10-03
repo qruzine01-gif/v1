@@ -1,4 +1,6 @@
 const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -9,6 +11,7 @@ const { verifyEmailConfig } = require("./utils/emailService");
 const { isConfigured: isWhatsAppConfigured } = require("./utils/whatsappService");
 
 const app = express();
+const server = http.createServer(app);
 
 // ---- Security Middleware ----
 app.use(helmet());
@@ -143,7 +146,42 @@ app.use("*", (req, res) => {
 
 // ---- Start Server ----
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+// Initialize Socket.IO with CORS aligned to REST CORS
+const io = new Server(server, {
+  cors: {
+    origin: (origin, callback) => {
+      // Reuse REST CORS allowlist logic
+      if (!origin) return callback(null, true);
+      const isExactAllowed = allowedOrigins.includes(origin);
+      const vercelPattern = process.env.ALLOW_VERCEL_PATTERN === "true";
+      const isVercel = vercelPattern && /\.vercel\.app$/.test(new URL(origin).hostname);
+      if (isExactAllowed || isVercel) return callback(null, true);
+      console.warn("[Socket.IO CORS] Blocked origin:", origin);
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  },
+});
+
+// Expose io to routes via app
+app.set('io', io);
+
+io.on('connection', (socket) => {
+  console.log('[Socket] client connected', socket.id);
+
+  // Client should send resID to join its restaurant room
+  socket.on('joinRestaurant', (resID) => {
+    if (!resID) return;
+    socket.join(resID);
+    console.log(`[Socket] ${socket.id} joined room`, resID);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('[Socket] client disconnected', socket.id);
+  });
+});
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log("[Startup] Allowed CORS Origins:", allowedOrigins);
   if (process.env.ALLOW_VERCEL_PATTERN === "true") {

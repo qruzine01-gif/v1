@@ -125,6 +125,37 @@ router.post("/place", orderValidation, async (req, res) => {
 
     await order.save()
 
+    // Emit socket event: order updated (status/eta)
+    try {
+      const io = req.app.get('io')
+      if (io) {
+        io.to(order.resID).emit('order:updated', {
+          orderID: order.orderID,
+          status: order.status,
+          estimatedTime: order.estimatedTime,
+          paymentStatus: order.paymentStatus,
+          updatedAt: order.updatedAt,
+        })
+      }
+    } catch (e) {
+      console.warn('[Socket] emit order:updated failed', e?.message || e)
+    }
+
+    // Emit socket event: new order created for this restaurant
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        // Prepare lightweight payload enriched with qrName
+        const createdPayload = {
+          ...order.toObject(),
+          qrName: (qrCode?.type || qrCode?.description || order.qrID),
+        };
+        io.to(resID).emit('order:created', createdPayload);
+      }
+    } catch (e) {
+      console.warn('[Socket] emit order:created failed', e?.message || e);
+    }
+
     // Store/update user data for super admin export (fire-and-forget to reduce latency)
     ;(async () => {
       try {
@@ -333,6 +364,22 @@ router.patch("/:orderID/status", authenticateSubAdmin, async (req, res) => {
 
     await order.save()
 
+    // Emit socket event: order updated (status/eta)
+    try {
+      const io = req.app.get('io')
+      if (io) {
+        io.to(order.resID).emit('order:updated', {
+          orderID: order.orderID,
+          status: order.status,
+          estimatedTime: order.estimatedTime,
+          paymentStatus: order.paymentStatus,
+          updatedAt: order.updatedAt,
+        })
+      }
+    } catch (e) {
+      console.warn('[Socket] emit order:updated failed', e?.message || e)
+    }
+
     // Send status update via WhatsApp only (best-effort)
     if (previousStatus !== status) {
       ;(async () => {
@@ -410,6 +457,20 @@ router.patch("/:orderID/payment", authenticateSubAdmin, async (req, res) => {
     }
 
     await order.save()
+
+    // Emit socket event: payment updated
+    try {
+      const io = req.app.get('io')
+      if (io) {
+        io.to(order.resID).emit('order:updated', {
+          orderID: order.orderID,
+          status: order.status,
+          updatedAt: order.updatedAt,
+        })
+      }
+    } catch (e) {
+      console.warn('[Socket] emit order:updated (payment) failed', e?.message || e)
+    }
 
     res.json({
       success: true,
@@ -581,6 +642,20 @@ router.patch("/:orderID/cancel", authenticateSubAdmin, async (req, res) => {
     })
 
     await order.save()
+
+    // Emit socket event: order cancelled
+    try {
+      const io = req.app.get('io')
+      if (io) {
+        io.to(order.resID).emit('order:updated', {
+          orderID: order.orderID,
+          status: order.status,
+          updatedAt: order.updatedAt,
+        })
+      }
+    } catch (e) {
+      console.warn('[Socket] emit order:updated (cancel) failed', e?.message || e)
+    }
 
     res.json({
       success: true,

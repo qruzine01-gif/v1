@@ -46,7 +46,7 @@ export default function ScreensShowcase() {
     overview: {
       title: "Dashboard Overview",
       description: "Get a comprehensive view of your restaurant's performance at a glance with real-time metrics and key insights.",
-      image: "/images/overview2.png",
+      image: "/images/overview1.png",
       type: 'mobile',
       features: [
         "Real-time sales and revenue tracking",

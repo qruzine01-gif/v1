@@ -1,48 +1,59 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { Mail, Phone, MapPin, Clock } from "lucide-react";
+import { Mail, Phone, MapPin, Clock, Globe } from "lucide-react";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
   
   const footerLinks = [
     {
+      title: "Owner Details",
+      links: [
+        { 
+          name: "Ashutosh Kumar Singh",
+          className: "font-medium text-white"
+        },
+        { 
+          name: "Radhika Mansion Rd, M. P Bagh",
+          icon: <MapPin className="h-4 w-4 mr-2 flex-shrink-0 mt-1" />,
+          className: "flex items-start"
+        },
+        { 
+          name: "Arrah, Bihar 802301",
+          className: "flex items-start"
+        },
+        { 
+          name: "+91 8210334312",
+          href: "tel:+918210334312",
+          icon: <Phone className="h-4 w-4 mr-2" />,
+          className: "flex items-center mt-2"
+        },
+        { 
+          name: "Visit Website",
+          href: "https://www.vigyapanwala.com/",
+          icon: <Globe className="h-4 w-4 mr-2" />,
+          className: "flex items-center mt-1 hover:text-bronze-400 transition-colors",
+          target: "_blank",
+          rel: "noopener noreferrer"
+        }
+      ],
+    },
+    {
       title: "Quick Links",
       links: [
-        { name: "Home", href: "/" },
+        { name: "Home", href: "/landing" },
         { name: "Features", href: "#features" },
         { name: "Pricing", href: "#pricing" },
-        { name: "Contact", href: "#contact" },
+        { name: "Contact", href: "/landing/contact" },
       ],
     },
     {
       title: "Legal",
       links: [
-        { name: "Privacy Policy", href: "/privacy" },
-        { name: "Terms of Service", href: "/terms" },
-        { name: "Cookie Policy", href: "/cookies" },
-      ],
-    },
-    {
-      title: "Contact Us",
-      links: [
-        { 
-          name: "info@qruzine.com", 
-          href: "mailto:info@qruzine.com",
-          icon: <Mail className="h-4 w-4 mr-2" />
-        },
-        { 
-          name: "+1 (555) 123-4567", 
-          href: "tel:+15551234567",
-          icon: <Phone className="h-4 w-4 mr-2" />
-        },
-        { 
-          name: "123 Restaurant Row, Foodie City, FC 12345", 
-          href: "#",
-          icon: <MapPin className="h-4 w-4 mr-2 flex-shrink-0 mt-1" />,
-          className: "flex items-start"
-        },
+        { name: "Privacy Policy", href: "/landing/privacy" },
+        { name: "Terms of Service", href: "/landing/terms" },
+        { name: "Cookie Policy", href: "/landing/privacy" },
       ],
     },
   ];
@@ -90,13 +101,22 @@ export default function Footer() {
               <ul className="space-y-3">
                 {section.links.map((link, linkIndex) => (
                   <li key={linkIndex}>
-                    <Link 
-                      href={link.href}
-                      className={`text-gray-400 hover:text-bronze-400 transition-colors flex items-center ${link.className || ''}`}
-                    >
-                      {link.icon || null}
-                      <span className={link.icon ? 'mt-0.5' : ''}>{link.name}</span>
-                    </Link>
+                    {link.href ? (
+                      <Link 
+                        href={link.href}
+                        className={`text-gray-400 hover:text-bronze-400 transition-colors flex items-center ${link.className || ''}`}
+                        target={link.target}
+                        rel={link.rel}
+                      >
+                        {link.icon || null}
+                        <span className={link.icon ? 'mt-0.5' : ''}>{link.name}</span>
+                      </Link>
+                    ) : (
+                      <div className={`text-gray-400 flex items-center ${link.className || ''}`}>
+                        {link.icon || null}
+                        <span className={link.icon ? 'mt-0.5' : ''}>{link.name}</span>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -109,16 +129,19 @@ export default function Footer() {
             <p className="text-sm text-gray-400">
               &copy; {currentYear} Qruzine by Vigyapanwala. All rights reserved.
             </p>
-            <div className="flex space-x-6 mt-4 md:mt-0">
-              <Link href="/privacy" className="text-sm text-gray-400 hover:text-bronze-400 transition-colors">
+            <div className="flex items-center space-x-6 mt-4 md:mt-0">
+              <Link href="/landing/privacy" className="text-sm text-gray-400 hover:text-bronze-400 transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="/terms" className="text-sm text-gray-400 hover:text-bronze-400 transition-colors">
+              <Link href="/landing/terms" className="text-sm text-gray-400 hover:text-bronze-400 transition-colors">
                 Terms of Service
               </Link>
-              <Link href="/cookies" className="text-sm text-gray-400 hover:text-bronze-400 transition-colors">
+              <Link href="/landing/privacy" className="text-sm text-gray-400 hover:text-bronze-400 transition-colors">
                 Cookie Policy
               </Link>
+              <span className="text-sm text-gray-400 border border-gray-700 rounded-full px-3 py-1 leading-none">
+                Made by <span className="text-white font-medium ml-1">Zentrix</span>
+              </span>
             </div>
           </div>
         </div>

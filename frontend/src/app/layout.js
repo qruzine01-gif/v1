@@ -7,6 +7,7 @@ import {
   JetBrains_Mono 
 } from "next/font/google";
 import "./globals.css";
+import { defaultMetadata } from "./(root)/landing/metadata";
 
 // Primary font for body text - excellent readability
 const inter = Inter({
@@ -45,33 +46,61 @@ const dancingScript = Dancing_Script({
   display: "swap",
 });
 
-// Monospace for order numbers, prices, etc.
+// Monospace font for code and technical elements
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
   display: "swap",
 });
 
+// Define basic metadata in layout - Twitter card will be handled in page components
 export const metadata = {
-  title: "Qruzine",
-  description: "Digital Ordering System - Fresh, Fast, Delicious",
+  title: {
+    template: '%s | Qruzine',
+    default: 'Qruzine - Digital Ordering System',
+  },
+  description: 'Transform your restaurant with Qruzine\'s digital ordering system. Increase sales, improve efficiency, and enhance customer experience.',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://qruzine.com'),
+  viewport: 'width=device-width, initial-scale=1',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#000000' },
+  ],
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon-16x16.png',
+    apple: '/apple-touch-icon.png',
+  },
+  manifest: '/site.webmanifest',
+  openGraph: {
+    title: 'Qruzine - Digital Ordering System for Restaurants',
+    description: 'Transform your restaurant with our digital ordering system. Increase sales and improve efficiency.',
+    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://qruzine.com',
+    siteName: 'Qruzine',
+    images: [
+      {
+        url: '/images/logo.png',
+        width: 800,
+        height: 800,
+        alt: 'Qruzine Digital Ordering System',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children, modal }) {
   return (
-    <html lang="en">
-      <body
-        className={`
-          ${inter.variable} 
-          ${playfairDisplay.variable} 
-          ${poppins.variable}
-          ${montserrat.variable}
-          ${dancingScript.variable}
-          ${jetbrainsMono.variable}
-          font-sans antialiased
-        `}
-      >
+    <html lang="en" className={`${inter.variable} font-sans`} suppressHydrationWarning>
+      <head>
+        <meta name="theme-color" content="#ffffff" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
+      <body className="min-h-screen bg-white text-gray-900 antialiased">
         {children}
+        {modal}
       </body>
     </html>
   );

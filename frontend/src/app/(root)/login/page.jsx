@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
@@ -10,6 +11,7 @@ import { Alert, AlertDescription } from "../../../components/ui/alert";
 import { Eye, EyeOff, Shield, Store, AlertCircle, CheckCircle } from "lucide-react";
 
 const Login = () => {
+  const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -22,6 +24,30 @@ const Login = () => {
   
   const base_url = process.env.NEXT_PUBLIC_API_BASE_URL;
   
+  const setAuthCookies = (token, userType, resId = '') => {
+    // Set token and user type in cookies for server-side access
+    const cookieOptions = {
+      path: '/',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24 * 7, // 1 week
+    };
+    
+    document.cookie = `token=${token}; ${Object.entries(cookieOptions).map(([key, value]) => 
+      `${key}=${value}`
+    ).join('; ')}`;
+    
+    document.cookie = `userType=${userType}; ${Object.entries(cookieOptions).map(([key, value]) => 
+      `${key}=${value}`
+    ).join('; ')}`;
+    
+    if (resId) {
+      document.cookie = `resId=${resId}; ${Object.entries(cookieOptions).map(([key, value]) => 
+        `${key}=${value}`
+      ).join('; ')}`;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -62,16 +88,20 @@ const Login = () => {
       if (response.ok && data.success) {
         setSuccess(data.message || "Login successful!");
         
-        // Store token in localStorage
+        // Store in localStorage for client-side access
         localStorage.setItem("authToken", data.token);
-        localStorage.setItem("userRole", data.user.role);
+        localStorage.setItem("userType", isAdmin ? "admin" : "restaurant");
         
-        // Small delay to show success message
+        // Set cookies for server-side access
+        const userType = isAdmin ? "admin" : "restaurant";
+        const resId = !isAdmin ? (data.user?.resID || 'default') : '';
+        setAuthCookies(data.token, userType, resId);
+        
+        // Small delay to show success message then redirect
         setTimeout(() => {
           if (isAdmin) {
-            window.location.href = "/admin";
+            window.location.href = '/admin';
           } else {
-            const resId = data.user.resID || "default";
             window.location.href = `/restaurant/${resId}`;
           }
         }, 1000);

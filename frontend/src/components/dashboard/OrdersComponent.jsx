@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import io from 'socket.io-client';
+import { Toaster, toast } from 'sonner';
 import { 
   Clock, 
   User, 
@@ -18,6 +20,33 @@ const OrdersComponent = ({ resID }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updating, setUpdating] = useState({});
+  const [isAutoRefreshing, setIsAutoRefreshing] = useState(false);
+  const isFetchingRef = useRef(false);
+  const socketRef = useRef(null);
+  const audioCtxRef = useRef(null);
+
+  const playBeep = () => {
+    try {
+      if (typeof window === 'undefined') return;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioCtx();
+      const ctx = audioCtxRef.current;
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.value = 880; // A5
+      o.connect(g);
+      g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
+      o.start();
+      o.stop(ctx.currentTime + 0.26);
+    } catch (e) {
+      // ignore
+    }
+  };
   const [filters, setFilters] = useState({
     status: '',
     qrID: '',
@@ -33,9 +62,15 @@ const OrdersComponent = ({ resID }) => {
     fetchOrders();
   }, [resID, filters]);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (silent = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      } else {
+        setIsAutoRefreshing(true);
+      }
       const response = await apiService.getOrders(resID, filters);
       setOrders(response.data);
       setPagination(response.pagination);
@@ -45,9 +80,82 @@ const OrdersComponent = ({ resID }) => {
       setError(err.message);
       console.error('Error fetching orders:', err);
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      } else {
+        setIsAutoRefreshing(false);
+      }
+      isFetchingRef.current = false;
     }
   };
+
+  // Socket.IO: real-time updates without polling
+  useEffect(() => {
+    if (!resID) return;
+
+    // Derive server URL from apiService.baseURL by stripping trailing '/api'
+    let serverUrl = apiService.baseURL || '';
+    if (serverUrl.endsWith('/api')) {
+      serverUrl = serverUrl.slice(0, -4);
+    }
+
+    // Avoid duplicate connections
+    if (socketRef.current) {
+      try { socketRef.current.disconnect(); } catch (_) {}
+      socketRef.current = null;
+    }
+
+    const socket = io(serverUrl, {
+      withCredentials: true,
+      transports: ['websocket'],
+    });
+
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      // Join restaurant room
+      socket.emit('joinRestaurant', resID);
+    });
+
+    // When a new order is created for this restaurant
+    socket.on('order:created', (payload) => {
+      // Basic guard
+      if (!payload || payload.resID !== resID) return;
+      // Refresh silently to respect current filters/pagination
+      fetchOrders(true);
+      toast.success(`New order #${payload.orderID} at ${payload.qrName || payload.qrID}`, {
+        description: `Amount: ₹${payload.totalAmount} • ETA: ${payload.estimatedTime} min`,
+      });
+      playBeep();
+    });
+
+    // When an existing order is updated
+    socket.on('order:updated', (update) => {
+      if (!update) return;
+      // Optimistically update local state if present; otherwise refresh silently
+      setOrders(prev => {
+        const idx = prev.findIndex(o => o.orderID === update.orderID);
+        if (idx === -1) {
+          // Not in current page, do a silent refresh to update counts/status badges
+          fetchOrders(true);
+          return prev;
+        }
+        const next = [...prev];
+        next[idx] = { ...next[idx], ...update };
+        return next;
+      });
+      if (update.status) {
+        toast.info(`Order #${update.orderID} → ${update.status}`);
+      }
+    });
+
+    return () => {
+      if (socketRef.current) {
+        try { socketRef.current.disconnect(); } catch (_) {}
+        socketRef.current = null;
+      }
+    };
+  }, [resID]);
 
   const updateOrderStatus = async (orderID, newStatus, note = '') => {
     try {
@@ -121,6 +229,7 @@ const OrdersComponent = ({ resID }) => {
 
   return (
     <div className="space-y-6">
+      <Toaster position="top-right" richColors />
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex flex-wrap gap-4 items-center">
@@ -166,7 +275,7 @@ const OrdersComponent = ({ resID }) => {
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${loading || isAutoRefreshing ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>
