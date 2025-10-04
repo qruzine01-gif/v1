@@ -98,7 +98,7 @@ export const metadata = {
     siteName: "Qruzine",
     images: [
       {
-        url: "/images/og-image.jpg", // Create a clean OG image with your logo + tagline
+        url: "/images/logo.png", // Create a clean OG image with your logo + tagline
         width: 1200,
         height: 630,
         alt: "Qruzine - Digital QR Menu",

@@ -5,7 +5,7 @@ export const siteConfig = {
   name: 'Qruzine',
   description: 'Digital Ordering System for Restaurants',
   url: SITE_URL,
-  ogImage: `${SITE_URL}/images/og-image.jpg`,
+  ogImage: `${SITE_URL}/images/logo.png`,
   links: {
     twitter: 'https://twitter.com/qruzine',
     github: 'https://github.com/your-org/qruzine',
