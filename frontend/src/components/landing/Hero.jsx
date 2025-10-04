@@ -12,6 +12,21 @@ export default function Hero() {
         <div className="absolute -bottom-24 -left-24 w-72 h-72 md:w-[28rem] md:h-[28rem] rounded-full bg-forest-700/20 blur-3xl" />
       </div>
 
+      {/* Top-left Logo - Visible across all breakpoints */}
+      <div className="absolute top-3 left-3 sm:top-6 sm:left-6 z-10">
+        <Link href="/" className="inline-flex items-center">
+          <Image
+            src="/images/logo.png"
+            alt="Qruzine Logo"
+            width={140}
+            height={40}
+            priority
+            className="h-8 w-auto sm:h-10 md:h-12 drop-shadow-md"
+            sizes="(min-width: 1024px) 12rem, (min-width: 640px) 10rem, 8rem"
+          />
+        </Link>
+      </div>
+
       {/* Restaurant Owner Button - Visible across all breakpoints */}
       <div className="absolute top-3 right-3 sm:top-6 sm:right-6 z-10">
         <Link 

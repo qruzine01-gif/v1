@@ -134,15 +134,11 @@ export default function ScreensShowcase() {
   const currentScreen = screens[activeTab];
 
   return (
-    <section id="showcase" className="py-16 md:py-24 bg-gray-50">
+    <section id="showcase" className="py-8 md:py-14 bg-gray-50">
+      
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          
-        </div>
-      </div>
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold restaurant-gradient-text-strong sm:text-4xl">
+          <h2 className="text-3xl font-bold py-2 restaurant-gradient-text-strong sm:text-4xl">
             Restaurant Management Platform
           </h2>
           <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">

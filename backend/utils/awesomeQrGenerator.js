@@ -10,6 +10,7 @@ try {
 }
 const fs = require('fs');
 const path = require('path');
+const QRCodeLib = require('qrcode');
 
 // Feature flag: when QR_COMPOSE=false, skip canvas composition and return raw AwesomeQR PNG
 // Default is true (compose enabled). Set QR_DEBUG=1 to enable extra logging.
@@ -542,6 +543,7 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
     } catch (_) {}
 
     // Generate base QR (block style)
+    // Base AwesomeQR options
     const qrOptions = {
       text: data,
       size: 480,
@@ -553,20 +555,59 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       colorLight: '#FFFFFF',
       ...options
     };
-    const qrBuffer = await new AwesomeQR(qrOptions).draw();
+    let qrBuffer = await new AwesomeQR(qrOptions).draw();
     // Diagnostics and safety checks on base QR buffer
-    const qrSizeBytes = Buffer.isBuffer(qrBuffer) ? qrBuffer.length : (qrBuffer?.byteLength || 0);
+    let qrSizeBytes = Buffer.isBuffer(qrBuffer) ? qrBuffer.length : (qrBuffer?.byteLength || 0);
     if (QR_DEBUG) {
       console.log('[QR] generateMinimalProfessionalQR: qrBuffer size=', qrSizeBytes, 'compose=', QR_COMPOSE);
     }
+    // If tiny or composition disabled, try to regenerate with safer AwesomeQR options, then fallback to 'qrcode'
+    const regenerateWithSafeAwesomeQR = async () => {
+      const safeOptions = {
+        ...qrOptions,
+        size: Math.max(512, options.size || 512),
+        margin: 20,
+        whiteMargin: true,
+        dotScale: 1.0,
+      };
+      if (QR_DEBUG) console.log('[QR] Regenerating with safer AwesomeQR options');
+      const buf = await new AwesomeQR(safeOptions).draw();
+      return buf;
+    };
+    const fallbackWithQRCodeLib = async () => {
+      if (QR_DEBUG) console.log('[QR] Falling back to qrcode library to generate PNG');
+      const dataUrl = await QRCodeLib.toDataURL(data, {
+        errorCorrectionLevel: 'H',
+        width: 512,
+        margin: 2,
+        color: { dark: '#000000', light: '#FFFFFF' },
+      });
+      return dataUrl;
+    };
+
+    const ensureSaneBasePng = async (buf) => {
+      const size = Buffer.isBuffer(buf) ? buf.length : (buf?.byteLength || 0);
+      if (size >= 8192) return bufferToDataUrl(buf);
+      // If too small, regenerate with safer AwesomeQR, else fallback to qrcode
+      try {
+        const safer = await regenerateWithSafeAwesomeQR();
+        const saferSize = Buffer.isBuffer(safer) ? safer.length : (safer?.byteLength || 0);
+        if (QR_DEBUG) console.log('[QR] Safer AwesomeQR size=', saferSize);
+        if (safer && saferSize >= 8192) return bufferToDataUrl(safer);
+      } catch (e) {
+        if (QR_DEBUG) console.warn('[QR] Safer AwesomeQR failed:', e?.message);
+      }
+      return await fallbackWithQRCodeLib();
+    };
+
     if (!qrBuffer || qrSizeBytes < 1024) {
-      console.warn('[QR] Warning: qrBuffer too small or empty, returning base QR without composition');
-      return bufferToDataUrl(qrBuffer || Buffer.alloc(0));
+      console.warn('[QR] Warning: qrBuffer too small or empty. Using safer generation path');
+      return await ensureSaneBasePng(qrBuffer || Buffer.alloc(0));
     }
     // Allow disabling composition via env flag to avoid canvas issues in production
     if (!QR_COMPOSE) {
-      if (QR_DEBUG) console.log('[QR] Composition disabled via QR_COMPOSE=false. Returning base AwesomeQR PNG');
-      return bufferToDataUrl(qrBuffer);
+      if (QR_DEBUG) console.log('[QR] Composition disabled via QR_COMPOSE=false. Returning base PNG with safety checks');
+      return await ensureSaneBasePng(qrBuffer);
     }
 
     // In some production environments, node-canvas system deps may be missing.
