@@ -12,9 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const QRCodeLib = require('qrcode');
 
-// Feature flag: when QR_COMPOSE=false, skip canvas composition and return raw AwesomeQR PNG
-// Default is true (compose enabled). Set QR_DEBUG=1 to enable extra logging.
-const QR_COMPOSE = process.env.QR_COMPOSE !== 'false';
+// Set QR_DEBUG=1 to enable extra logging.
 const QR_DEBUG = process.env.QR_DEBUG === '1' || process.env.QR_DEBUG === 'true';
 
 const bufferToDataUrl = (buf) => {
@@ -559,7 +557,7 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
     // Diagnostics and safety checks on base QR buffer
     let qrSizeBytes = Buffer.isBuffer(qrBuffer) ? qrBuffer.length : (qrBuffer?.byteLength || 0);
     if (QR_DEBUG) {
-      console.log('[QR] generateMinimalProfessionalQR: qrBuffer size=', qrSizeBytes, 'compose=', QR_COMPOSE);
+      console.log('[QR] generateMinimalProfessionalQR: qrBuffer size=', qrSizeBytes);
     }
     // If tiny or composition disabled, try to regenerate with safer AwesomeQR options, then fallback to 'qrcode'
     const regenerateWithSafeAwesomeQR = async () => {
@@ -603,11 +601,6 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
     if (!qrBuffer || qrSizeBytes < 1024) {
       console.warn('[QR] Warning: qrBuffer too small or empty. Using safer generation path');
       return await ensureSaneBasePng(qrBuffer || Buffer.alloc(0));
-    }
-    // Allow disabling composition via env flag to avoid canvas issues in production
-    if (!QR_COMPOSE) {
-      if (QR_DEBUG) console.log('[QR] Composition disabled via QR_COMPOSE=false. Returning base PNG with safety checks');
-      return await ensureSaneBasePng(qrBuffer);
     }
 
     // In some production environments, node-canvas system deps may be missing.
@@ -673,6 +666,8 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       ctx.lineWidth = 6;
       ctx.strokeStyle = '#E7D7BD';
       ctx.stroke();
+
+      // No cartoon background; clean cream panel only
 
       // Draw QR inside panel
       const qrImage = await loadImage(bufferToDataUrl(qrBuffer));
@@ -742,9 +737,8 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
 
       return canvas.toDataURL('image/png', 0.95);
     } catch (compositionErr) {
-      console.warn('QR composition failed, returning base QR. Hint: install system deps for node-canvas or use @napi-rs/canvas. Error:', compositionErr?.message);
-      // Fallback to raw AwesomeQR buffer as data URL
-      return bufferToDataUrl(qrBuffer);
+      console.error('QR composition failed. Ensure @napi-rs/canvas or node-canvas deps are available. Error:', compositionErr?.stack || compositionErr?.message);
+      throw new Error('QR composition failed');
     }
   } catch (error) {
     console.error('Minimal professional QR generation error:', error);

@@ -162,6 +162,8 @@ const CategoryManager = ({ resID, onCategoryChange }) => {
     });
   };
 
+  const isMobile = useMediaQuery({ maxWidth: 768 });
+
   if (loading && categories.length === 0) {
     return (
       <div className="space-y-4">
@@ -181,9 +183,6 @@ const CategoryManager = ({ resID, onCategoryChange }) => {
       </div>
     );
   }
-
-  const isMobile = useMediaQuery({ maxWidth: 768 });
-
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Header */}

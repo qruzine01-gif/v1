@@ -53,7 +53,10 @@ router.get("/:resID/:qrID/pdf", authenticateSubAdmin, verifyRestaurantAccess, as
 
     // Ensure we have a branded PNG data URL using awesome-qr
     const menuURL = generateMenuURL(resID, qrID)
-    const qrPngDataUrl = qrCode.qrCodeData || (await generateMinimalProfessionalQR(menuURL, restaurantName))
+    const qrPngDataUrl = qrCode.qrCodeData || (await generateMinimalProfessionalQR(
+      menuURL,
+      restaurantName
+    ))
 
     const doc = createQrPdf({ restaurantName, qrPngDataUrl })
     res.setHeader("Content-Type", "application/pdf")
@@ -101,7 +104,10 @@ router.post("/:resID", authenticateSubAdmin, verifyRestaurantAccess, qrCodeValid
     const menuURL = generateMenuURL(resID, qrID)
 
     // Generate QR code image with restaurant branding (awesome-qr)
-    const qrCodeImage = await generateMinimalProfessionalQR(menuURL, restaurant.name)
+    const qrCodeImage = await generateMinimalProfessionalQR(
+      menuURL,
+      restaurant.name
+    )
 
     // Create QR code record
     const qrCode = new QRCode({
@@ -315,7 +321,10 @@ router.post("/:resID/:qrID/regenerate", authenticateSubAdmin, verifyRestaurantAc
 
     // Generate new QR code image with restaurant branding (awesome-qr)
     const menuURL = generateMenuURL(resID, qrID)
-    const qrCodeImage = await generateMinimalProfessionalQR(menuURL, restaurant.name)
+    const qrCodeImage = await generateMinimalProfessionalQR(
+      menuURL,
+      restaurant.name
+    )
 
     qrCode.qrCodeData = qrCodeImage
     await qrCode.save()
