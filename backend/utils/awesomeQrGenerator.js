@@ -182,6 +182,7 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
         colorDark: '#000000',
         colorLight: '#FFFFFF',
         autoColor: false,
+        binarize: true, // Force proper black/white binarization
         ...options
       };
       
@@ -195,8 +196,40 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
         throw new Error('AwesomeQR buffer invalid');
       }
       
+      // CRITICAL FIX: Create a temporary canvas to verify the QR is valid
+      console.log('[QR] Verifying QR image validity');
+      const tempCanvas = createCanvas(480, 480);
+      const tempCtx = tempCanvas.getContext('2d');
+      
       qrDataUrl = bufferToDataUrl(qrBuffer);
-      console.log('[QR] AwesomeQR generation successful');
+      const testImage = await loadImage(qrDataUrl);
+      tempCtx.drawImage(testImage, 0, 0);
+      
+      // Check if the temp canvas has proper QR data
+      const testData = tempCtx.getImageData(240, 240, 1, 1).data;
+      console.log('[QR] Test QR center pixel:', testData[0], testData[1], testData[2], testData[3]);
+      
+      // Sample a larger area to check contrast
+      const sampleData = tempCtx.getImageData(0, 0, 480, 480).data;
+      let hasWhite = false, hasBlack = false;
+      
+      for (let i = 0; i < sampleData.length; i += 40 * 4) {
+        const r = sampleData[i], g = sampleData[i + 1], b = sampleData[i + 2];
+        const l = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
+        if (l > 200) hasWhite = true;
+        if (l < 50) hasBlack = true;
+        if (hasWhite && hasBlack) break;
+      }
+      
+      console.log('[QR] Test QR has white pixels:', hasWhite, 'black pixels:', hasBlack);
+      
+      // If the QR doesn't have proper contrast, regenerate with qrcode library
+      if (!hasWhite || !hasBlack) {
+        console.warn('[QR] AwesomeQR produced invalid image, switching to qrcode library');
+        throw new Error('AwesomeQR produced invalid QR');
+      }
+      
+      console.log('[QR] AwesomeQR generation successful and validated');
       
     } catch (awesomeQrErr) {
       console.error('[QR] AwesomeQR failed:', awesomeQrErr.message);
@@ -205,6 +238,19 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       // Fallback to qrcode library
       qrDataUrl = await generateSafeBaseQR(data);
       console.log('[QR] Fallback QR generation successful');
+      
+      // Validate the fallback QR as well
+      try {
+        const tempCanvas = createCanvas(512, 512);
+        const tempCtx = tempCanvas.getContext('2d');
+        const testImage = await loadImage(qrDataUrl);
+        tempCtx.drawImage(testImage, 0, 0);
+        
+        const testData = tempCtx.getImageData(256, 256, 1, 1).data;
+        console.log('[QR] Fallback QR center pixel:', testData[0], testData[1], testData[2], testData[3]);
+      } catch (validateErr) {
+        console.warn('[QR] Could not validate fallback QR:', validateErr.message);
+      }
     }
 
     // Step 2: Compose the branded design
@@ -215,7 +261,12 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       const canvasHeight = 1024;
       const canvas = createCanvas(canvasWidth, canvasHeight);
       const ctx = canvas.getContext('2d');
-
+      
+      // CRITICAL: Set proper canvas context settings
+      ctx.globalCompositeOperation = 'source-over'; // Default, but explicit
+      ctx.globalAlpha = 1.0; // Full opacity
+      ctx.imageSmoothingEnabled = true; // Enable for background/text
+      
       const burgundy = '#6B0D13';
       const cream = '#FFF2DC';
       const red = '#B22020';
@@ -307,22 +358,31 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       // CRITICAL FIX: Draw on a white background first to ensure visibility
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(qrX, qrY, qrSize, qrSize);
+      console.log('[QR] White background drawn at QR position');
       
-      // Use drawImage with explicit dimensions and ensure proper rendering
-      ctx.save();
+      // Reset any transformations and set proper context for QR drawing
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1.0;
       ctx.imageSmoothingEnabled = false; // Crisp QR code rendering
       
       try {
+        // Draw the QR image
         ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
         console.log('[QR] QR image drawn');
+        
+        // Verify immediately after drawing
+        const immediateCheck = ctx.getImageData(qrX + 100, qrY + 100, 1, 1).data;
+        console.log('[QR] Immediate post-draw pixel check:', immediateCheck[0], immediateCheck[1], immediateCheck[2], immediateCheck[3]);
+        
       } catch (drawErr) {
         console.error('[QR] Failed to draw QR image:', drawErr.message);
-        ctx.restore();
         console.log('[QR] Returning base QR due to draw failure');
         return qrDataUrl;
       }
       
-      ctx.restore();
+      // Reset image smoothing for text
+      ctx.imageSmoothingEnabled = true;
       
       // Sample a few pixels to verify the image actually rendered
       try {
