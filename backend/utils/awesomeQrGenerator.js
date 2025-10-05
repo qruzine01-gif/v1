@@ -29,16 +29,38 @@ const hasContrast = (ctx, x, y, w, h) => {
   try {
     const data = ctx.getImageData(x, y, w, h).data;
     let min = 255, max = 0;
-    // sample every 16th pixel to reduce cost
-    for (let i = 0; i < data.length; i += 16 * 4) {
+    let blackPixels = 0;
+    let whitePixels = 0;
+    let totalSampled = 0;
+    
+    // Sample every 8th pixel for better coverage (was 16th)
+    for (let i = 0; i < data.length; i += 8 * 4) {
       const r = data[i], g = data[i + 1], b = data[i + 2];
+      const a = data[i + 3]; // Check alpha channel
+      
+      // Skip fully transparent pixels
+      if (a < 10) continue;
+      
       const l = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
       if (l < min) min = l;
       if (l > max) max = l;
+      
+      if (l < 50) blackPixels++;
+      if (l > 200) whitePixels++;
+      totalSampled++;
     }
+    
     const contrast = max - min;
-    if (QR_DEBUG) console.log(`[QR] Contrast check: min=${min}, max=${max}, diff=${contrast}`);
-    return contrast > 40;
+    const hasBlackAndWhite = blackPixels > 0 && whitePixels > 0;
+    
+    if (QR_DEBUG) {
+      console.log(`[QR] Contrast check: min=${min}, max=${max}, diff=${contrast}`);
+      console.log(`[QR] Pixels sampled: ${totalSampled}, black: ${blackPixels}, white: ${whitePixels}`);
+      console.log(`[QR] Has B&W pixels: ${hasBlackAndWhite}`);
+    }
+    
+    // QR code should have both black and white pixels with good contrast
+    return contrast > 100 && hasBlackAndWhite;
   } catch (err) {
     console.warn('[QR] hasContrast check failed:', err.message);
     return false;
@@ -261,16 +283,60 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
 
       // Load and draw QR image
       console.log('[QR] Loading QR image');
-      const qrImage = await loadImage(qrDataUrl);
-      console.log('[QR] QR image loaded, dimensions:', qrImage.width, 'x', qrImage.height);
+      let qrImage;
+      
+      try {
+        qrImage = await loadImage(qrDataUrl);
+        console.log('[QR] QR image loaded, dimensions:', qrImage.width, 'x', qrImage.height);
+        
+        // Verify the image actually has data
+        if (!qrImage.width || !qrImage.height || qrImage.width < 100 || qrImage.height < 100) {
+          throw new Error(`Invalid QR image dimensions: ${qrImage.width}x${qrImage.height}`);
+        }
+      } catch (loadErr) {
+        console.error('[QR] Failed to load QR image:', loadErr.message);
+        console.log('[QR] Returning base QR due to image load failure');
+        return qrDataUrl;
+      }
       
       const innerMargin = 26;
       const qrSize = panelW - innerMargin * 2;
       const qrX = panelX + innerMargin;
       const qrY = panelY + innerMargin;
       
-      ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
-      console.log('[QR] QR image drawn');
+      // CRITICAL FIX: Draw on a white background first to ensure visibility
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(qrX, qrY, qrSize, qrSize);
+      
+      // Use drawImage with explicit dimensions and ensure proper rendering
+      ctx.save();
+      ctx.imageSmoothingEnabled = false; // Crisp QR code rendering
+      
+      try {
+        ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
+        console.log('[QR] QR image drawn');
+      } catch (drawErr) {
+        console.error('[QR] Failed to draw QR image:', drawErr.message);
+        ctx.restore();
+        console.log('[QR] Returning base QR due to draw failure');
+        return qrDataUrl;
+      }
+      
+      ctx.restore();
+      
+      // Sample a few pixels to verify the image actually rendered
+      try {
+        const testPixel = ctx.getImageData(qrX + qrSize/2, qrY + qrSize/2, 1, 1).data;
+        console.log('[QR] Sample center pixel RGBA:', testPixel[0], testPixel[1], testPixel[2], testPixel[3]);
+        
+        // If center pixel is pure black or pure white, something went wrong
+        if ((testPixel[0] === 0 && testPixel[1] === 0 && testPixel[2] === 0 && testPixel[3] === 0) ||
+            (testPixel[3] === 0)) {
+          console.warn('[QR] Center pixel is fully transparent, image may not have rendered');
+        }
+      } catch (e) {
+        console.warn('[QR] Could not sample pixel:', e.message);
+      }
 
       // Validate QR contrast
       const hasQRContrast = hasContrast(ctx, qrX, qrY, qrSize, qrSize);
