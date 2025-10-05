@@ -1,16 +1,18 @@
 const { AwesomeQR } = require('awesome-qr');
 // Prefer @napi-rs/canvas in production (no system deps). Fallback to node-canvas.
-let createCanvas, loadImage;
+let createCanvas, loadImage, registerFont;
 try {
-  ({ createCanvas, loadImage } = require('@napi-rs/canvas'));
+  ({ createCanvas, loadImage, registerFont } = require('@napi-rs/canvas'));
   console.log('[QR] Using @napi-rs/canvas');
 } catch (_) {
-  ({ createCanvas, loadImage } = require('canvas'));
+  ({ createCanvas, loadImage, registerFont } = require('canvas'));
   console.log('[QR] Using node-canvas');
 }
 const fs = require('fs');
+const path = require('path');
 const QRCodeLib = require('qrcode');
 
+// Set QR_DEBUG=1 to enable extra logging.
 const QR_DEBUG = process.env.QR_DEBUG === '1' || process.env.QR_DEBUG === 'true';
 
 const bufferToDataUrl = (buf) => {
@@ -27,320 +29,419 @@ const hasContrast = (ctx, x, y, w, h) => {
   try {
     const data = ctx.getImageData(x, y, w, h).data;
     let min = 255, max = 0;
+    // sample every 16th pixel to reduce cost
     for (let i = 0; i < data.length; i += 16 * 4) {
       const r = data[i], g = data[i + 1], b = data[i + 2];
       const l = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
       if (l < min) min = l;
       if (l > max) max = l;
     }
-    return max - min > 40;
+    const contrast = max - min;
+    if (QR_DEBUG) console.log(`[QR] Contrast check: min=${min}, max=${max}, diff=${contrast}`);
+    return contrast > 40;
   } catch (err) {
-    console.warn('hasContrast check failed, treating as no-contrast:', err.message);
+    console.warn('[QR] hasContrast check failed:', err.message);
     return false;
   }
 };
 
+// Helper: wrap text into lines that fit within maxWidth using the current ctx.font
+const wrapTextLines = (ctx, text, maxWidth, transform = (s) => s) => {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines = [];
+  let current = '';
+  for (const w of words) {
+    const test = current ? current + ' ' + w : w;
+    const measured = transform(test);
+    if (ctx.measureText(measured).width <= maxWidth) {
+      current = test;
+    } else {
+      if (current) lines.push(current);
+      current = w;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+};
+
+// Helper: draw up to maxLines centered lines around centerY
+const drawWrappedCentered = (ctx, text, options) => {
+  const {
+    centerX,
+    centerY,
+    maxWidth,
+    fontFamily = 'serif',
+    weight = '900',
+    initialSize = 84,
+    minSize = 28,
+    maxLines = 2,
+    transform = (s) => s.toUpperCase(),
+  } = options;
+
+  let size = initialSize;
+  let lines = [];
+  while (size >= minSize) {
+    ctx.font = `${weight} ${size}px ${fontFamily}`;
+    lines = wrapTextLines(ctx, text, maxWidth, transform);
+    const widest = Math.max(...lines.map(l => ctx.measureText(transform(l)).width));
+    if (lines.length <= maxLines && widest <= maxWidth) break;
+    size -= 2;
+  }
+  if (lines.length > maxLines) {
+    const merged = [lines[0], lines.slice(1).join(' ')];
+    lines = merged.slice(0, maxLines);
+  }
+  const lineHeight = size + 4;
+  const totalHeight = lineHeight * (lines.length - 1);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  lines.forEach((line, idx) => {
+    const y = centerY - totalHeight / 2 + idx * lineHeight;
+    ctx.fillText(transform(line), centerX, y);
+  });
+  return size;
+};
+
 /**
- * Generate a professional QR code with burgundy background and Playfair font
- * @param {string} data - The URL to encode in QR code
- * @param {string} restaurantName - Name of the restaurant
- * @param {Object} options - Additional options for QR generation
- * @returns {Promise<string>} Base64 encoded image
+ * Generate a safe base QR code PNG using qrcode library as fallback
  */
-const generateProfessionalQR = async (data, restaurantName, options = {}) => {
+const generateSafeBaseQR = async (data) => {
   try {
-    // Professional QR code options with block style (not dotted)
-    const qrOptions = {
-      text: data,
-      size: 300,
-      margin: 20,
-      correctLevel: AwesomeQR.CorrectLevel.H,
-      backgroundDimming: 'rgba(0,0,0,0)',
-      logoImage: undefined,
-      whiteMargin: true,
-      dotScale: 1.0,
-      maskedDots: false,
-      colorDark: '#000000',
-      colorLight: '#FFFFFF',
-      autoColor: false,
-      ...options
-    };
-
-    // Generate the base QR code
-    let qrBuffer;
-    try {
-      qrBuffer = await new AwesomeQR(qrOptions).draw();
-    } catch (err) {
-      console.error('[QR] AwesomeQR failed:', err.message);
-      throw new Error('QR generation failed');
-    }
-    const qrSizeBytes = Buffer.isBuffer(qrBuffer) ? qrBuffer.length : (qrBuffer?.byteLength || 0);
-    if (QR_DEBUG) console.log('[QR] qrBuffer size:', qrSizeBytes);
-
-    // Fallback: Empty buffer? Just return QR PNG directly
-    if (!qrBuffer || qrSizeBytes < 1024) {
-      console.warn('[QR] Buffer too small, fallback to base QR PNG');
-      return bufferToDataUrl(qrBuffer || Buffer.alloc(0));
-    }
-
-    // Canvas composition
-    let canvas, ctx, qrImage;
-    try {
-      const canvasWidth = 400, canvasHeight = 550;
-      canvas = createCanvas(canvasWidth, canvasHeight);
-      ctx = canvas.getContext('2d');
-
-      // Burgundy background
-      ctx.fillStyle = '#800020';
-      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-      // Restaurant name (top)
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 26px serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      let fontSize = 26, maxNameWidth = canvasWidth - 60;
-      while (ctx.measureText(restaurantName.toUpperCase()).width > maxNameWidth && fontSize > 16) {
-        fontSize -= 2;
-        ctx.font = `bold ${fontSize}px serif`;
-      }
-
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-      ctx.shadowBlur = 2;
-      ctx.shadowOffsetX = 1;
-      ctx.shadowOffsetY = 1;
-      ctx.fillText(restaurantName.toUpperCase(), canvasWidth / 2, 60);
-
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 0;
-
-      // QR panel
-      const qrSize = 300, qrX = (canvasWidth - qrSize) / 2, qrY = 100, qrPadding = 15;
-      const qrBgX = qrX - qrPadding, qrBgY = qrY - qrPadding, qrBgSize = qrSize + (qrPadding * 2);
-
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(qrBgX, qrBgY, qrBgSize, qrBgSize);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(qrBgX, qrBgY, qrBgSize, qrBgSize);
-
-      // Load QR image robustly
-      try {
-        qrImage = await loadImage(bufferToDataUrl(qrBuffer));
-        if (!qrImage || !qrImage.width || !qrImage.height) {
-          throw new Error('QR image failed to load');
-        }
-      } catch (err) {
-        console.error('[QR] loadImage failed, fallback to base QR PNG:', err.message);
-        return bufferToDataUrl(qrBuffer);
-      }
-
-      ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
-
-      // Check contrast: fallback if QR is blank
-      if (!hasContrast(ctx, qrX, qrY, qrSize, qrSize)) {
-        console.warn('[QR] QR region lacks contrast, fallback to base QR PNG');
-        return bufferToDataUrl(qrBuffer);
-      }
-
-      // "SCAN THE CODE TO ORDER"
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 18px serif';
-      ctx.textAlign = 'center';
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-      ctx.shadowBlur = 2;
-      ctx.shadowOffsetX = 1;
-      ctx.shadowOffsetY = 1;
-      ctx.fillText('SCAN THE CODE TO ORDER', canvasWidth / 2, qrY + qrSize + 40);
-
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 0;
-
-      // "POWERED BY QRUZINE" at bottom
-      ctx.fillStyle = '#FFD700';
-      ctx.font = 'bold 16px serif';
-      ctx.textAlign = 'center';
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-      ctx.shadowBlur = 2;
-      ctx.shadowOffsetX = 1;
-      ctx.shadowOffsetY = 1;
-      ctx.fillText('POWERED BY QRUZINE', canvasWidth / 2, canvasHeight - 30);
-
-      // Return composed PNG
-      return canvas.toDataURL('image/png', 0.95);
-    } catch (compositionErr) {
-      console.error('[QR] Canvas composition failed, fallback to base QR PNG:', compositionErr.message);
-      return bufferToDataUrl(qrBuffer);
-    }
+    console.log('[QR] Generating safe base QR using qrcode library');
+    const dataUrl = await QRCodeLib.toDataURL(data, {
+      errorCorrectionLevel: 'H',
+      width: 512,
+      margin: 4,
+      color: { dark: '#000000', light: '#FFFFFF' },
+    });
+    return dataUrl;
   } catch (error) {
-    console.error('Professional QR code generation error:', error);
-    throw new Error('Failed to generate professional QR code');
+    console.error('[QR] Safe base QR generation failed:', error);
+    throw error;
   }
 };
 
 /**
+ * Generate professional QR code with burgundy background and Playfair font
+ * Enhanced with better error handling and production support
+ */
+const generateMinimalProfessionalQR = async (data, restaurantName, options = {}) => {
+  console.log('[QR] Starting generateMinimalProfessionalQR');
+  console.log('[QR] Data URL:', data);
+  console.log('[QR] Restaurant:', restaurantName);
+  
+  try {
+    // Register Playfair optionally
+    let fontFamily = 'serif';
+    const playfairPath = options.playfairFontPath || process.env.PLAYFAIR_TTF;
+    try {
+      if (playfairPath && fs.existsSync(playfairPath)) {
+        registerFont(playfairPath, { family: 'Playfair Display' });
+        fontFamily = 'Playfair Display';
+        console.log('[QR] Playfair font registered');
+      }
+    } catch (fontErr) {
+      console.warn('[QR] Font registration failed, using serif:', fontErr.message);
+    }
+
+    // Step 1: Generate base QR code
+    let qrDataUrl;
+    let qrBuffer;
+    
+    try {
+      console.log('[QR] Attempting QR generation with AwesomeQR');
+      const qrOptions = {
+        text: data,
+        size: 480,
+        margin: 20, // Increased margin for safety
+        correctLevel: AwesomeQR.CorrectLevel.H,
+        whiteMargin: true,
+        dotScale: 1.0,
+        colorDark: '#000000',
+        colorLight: '#FFFFFF',
+        autoColor: false,
+        ...options
+      };
+      
+      qrBuffer = await new AwesomeQR(qrOptions).draw();
+      const qrSizeBytes = Buffer.isBuffer(qrBuffer) ? qrBuffer.length : (qrBuffer?.byteLength || 0);
+      console.log('[QR] AwesomeQR buffer size:', qrSizeBytes, 'bytes');
+      
+      // Validate buffer size
+      if (!qrBuffer || qrSizeBytes < 1000) {
+        console.warn('[QR] AwesomeQR buffer too small, switching to fallback');
+        throw new Error('AwesomeQR buffer invalid');
+      }
+      
+      qrDataUrl = bufferToDataUrl(qrBuffer);
+      console.log('[QR] AwesomeQR generation successful');
+      
+    } catch (awesomeQrErr) {
+      console.error('[QR] AwesomeQR failed:', awesomeQrErr.message);
+      console.log('[QR] Falling back to qrcode library');
+      
+      // Fallback to qrcode library
+      qrDataUrl = await generateSafeBaseQR(data);
+      console.log('[QR] Fallback QR generation successful');
+    }
+
+    // Step 2: Compose the branded design
+    try {
+      console.log('[QR] Starting canvas composition');
+      
+      const canvasWidth = 682;
+      const canvasHeight = 1024;
+      const canvas = createCanvas(canvasWidth, canvasHeight);
+      const ctx = canvas.getContext('2d');
+
+      const burgundy = '#6B0D13';
+      const cream = '#FFF2DC';
+      const red = '#B22020';
+      const gold = '#D4AF37';
+
+      // Background
+      ctx.fillStyle = burgundy;
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+      console.log('[QR] Background drawn');
+
+      // Title (auto-wrap for long names)
+      const title = (restaurantName || 'RESTAURANT NAME').trim();
+      ctx.fillStyle = cream;
+      ctx.shadowColor = 'rgba(0,0,0,0.25)';
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 2;
+      
+      drawWrappedCentered(ctx, title, {
+        centerX: canvasWidth / 2,
+        centerY: 146,
+        maxWidth: canvasWidth - 160,
+        fontFamily,
+        weight: '900',
+        initialSize: 64,
+        minSize: 20,
+        maxLines: 2,
+        transform: (s) => s.toUpperCase(),
+      });
+      
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      console.log('[QR] Title drawn');
+
+      // Rounded cream panel for QR
+      const panelW = 520;
+      const panelH = 520;
+      const panelX = (canvasWidth - panelW) / 2;
+      const panelY = 210;
+      
+      const roundRect = (x, y, w, h, r) => {
+        const rr = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + rr, y);
+        ctx.lineTo(x + w - rr, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+        ctx.lineTo(x + w, y + h - rr);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+        ctx.lineTo(x + rr, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+        ctx.lineTo(x, y + rr);
+        ctx.quadraticCurveTo(x, y, x + rr, y);
+        ctx.closePath();
+      };
+      
+      roundRect(panelX, panelY, panelW, panelH, 18);
+      ctx.fillStyle = cream;
+      ctx.fill();
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#E7D7BD';
+      ctx.stroke();
+      console.log('[QR] Panel drawn');
+
+      // Load and draw QR image
+      console.log('[QR] Loading QR image');
+      const qrImage = await loadImage(qrDataUrl);
+      console.log('[QR] QR image loaded, dimensions:', qrImage.width, 'x', qrImage.height);
+      
+      const innerMargin = 26;
+      const qrSize = panelW - innerMargin * 2;
+      const qrX = panelX + innerMargin;
+      const qrY = panelY + innerMargin;
+      
+      ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
+      console.log('[QR] QR image drawn');
+
+      // Validate QR contrast
+      const hasQRContrast = hasContrast(ctx, qrX, qrY, qrSize, qrSize);
+      console.log('[QR] QR contrast check:', hasQRContrast);
+      
+      if (!hasQRContrast) {
+        console.warn('[QR] No contrast detected in QR region, returning base QR');
+        return qrDataUrl;
+      }
+
+      // Red pill CTA
+      const pillW = 520;
+      const pillH = 96;
+      const pillX = (canvasWidth - pillW) / 2;
+      const pillY = panelY + panelH + 40;
+      
+      roundRect(pillX, pillY, pillW, pillH, 24);
+      ctx.fillStyle = red;
+      ctx.shadowColor = 'rgba(0,0,0,0.25)';
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 3;
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      
+      ctx.fillStyle = '#FFFFFF';
+      let scanSize = 32;
+      ctx.font = `700 ${scanSize}px ${fontFamily}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      const lines = ['SCAN THE CODE', 'TO ORDER'];
+      const maxScanWidth = pillW - 80;
+      
+      while (Math.max(...lines.map(l => ctx.measureText(l).width)) > maxScanWidth && scanSize > 20) {
+        scanSize -= 2;
+        ctx.font = `700 ${scanSize}px ${fontFamily}`;
+      }
+      
+      const lh = scanSize + 2;
+      const cx = canvasWidth / 2;
+      const centerY = pillY + pillH / 2;
+      
+      ctx.fillText(lines[0], cx, centerY - lh / 2);
+      ctx.fillText(lines[1], cx, centerY + lh / 2);
+      ctx.textBaseline = 'alphabetic';
+      console.log('[QR] CTA button drawn');
+
+      // Gold footer branding
+      ctx.fillStyle = gold;
+      ctx.shadowColor = 'rgba(0,0,0,0.3)';
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 2;
+      ctx.font = `800 24px ${fontFamily}`;
+      ctx.fillText('POWERED BY', canvasWidth / 2, canvasHeight - 90);
+      
+      let brandSize = 40;
+      ctx.font = `900 ${brandSize}px ${fontFamily}`;
+      const maxBrand = canvasWidth - 120;
+      
+      while (ctx.measureText('QRUZINE').width > maxBrand && brandSize > 28) {
+        brandSize -= 2;
+        ctx.font = `900 ${brandSize}px ${fontFamily}`;
+      }
+      
+      ctx.fillText('QRUZINE', canvasWidth / 2, canvasHeight - 30);
+      console.log('[QR] Footer branding drawn');
+
+      // Convert to data URL
+      const finalDataUrl = canvas.toDataURL('image/png', 0.95);
+      console.log('[QR] Canvas composition complete, data URL length:', finalDataUrl.length);
+      
+      return finalDataUrl;
+      
+    } catch (compositionErr) {
+      console.error('[QR] Canvas composition failed:', compositionErr);
+      console.error('[QR] Stack trace:', compositionErr.stack);
+      console.log('[QR] Returning base QR as fallback');
+      
+      // Return the base QR if composition fails
+      return qrDataUrl;
+    }
+
+  } catch (error) {
+    console.error('[QR] Critical error in generateMinimalProfessionalQR:', error);
+    console.error('[QR] Stack trace:', error.stack);
+    
+    // Last resort: generate simple QR with qrcode library
+    try {
+      console.log('[QR] Attempting last resort QR generation');
+      return await generateSafeBaseQR(data);
+    } catch (lastResortErr) {
+      console.error('[QR] Last resort failed:', lastResortErr);
+      throw new Error('Failed to generate QR code: ' + error.message);
+    }
+  }
+};
+
+/**
+ * Generate professional QR code (legacy function for backward compatibility)
+ */
+const generateProfessionalQR = async (data, restaurantName, options = {}) => {
+  return generateMinimalProfessionalQR(data, restaurantName, options);
+};
+
+/**
  * Generate professional QR code with custom logo
- * @param {string} data - The URL to encode
- * @param {string} restaurantName - Restaurant name
- * @param {string} logoPath - Path to logo image (optional)
- * @param {Object} options - Additional options
- * @returns {Promise<string>} Base64 encoded image
  */
 const generateProfessionalQRWithLogo = async (data, restaurantName, logoPath = null, options = {}) => {
   try {
     let logoImage = undefined;
+    
     if (logoPath && fs.existsSync(logoPath)) {
       logoImage = await loadImage(logoPath);
     }
+
     const qrOptions = {
-      text: data,
-      size: 300,
-      margin: 20,
-      correctLevel: AwesomeQR.CorrectLevel.H,
+      ...options,
       logoImage: logoImage,
       logoScale: 0.15,
       logoMargin: 8,
       logoCornerRadius: 8,
-      whiteMargin: true,
-      dotScale: 1.0,
-      colorDark: '#000000',
-      colorLight: '#FFFFFF',
-      ...options
     };
-    return await generateProfessionalQR(data, restaurantName, qrOptions);
+
+    return await generateMinimalProfessionalQR(data, restaurantName, qrOptions);
   } catch (error) {
-    console.error('Professional QR with logo generation error:', error);
-    return await generateProfessionalQR(data, restaurantName, options);
+    console.error('[QR] Logo QR generation error:', error);
+    return await generateMinimalProfessionalQR(data, restaurantName, options);
   }
 };
 
 /**
  * Generate compact professional QR code
- * @param {string} data - The URL to encode
- * @param {string} restaurantName - Restaurant name  
- * @param {Object} options - Options for QR generation
- * @returns {Promise<string>} Base64 encoded image
  */
 const generateCompactProfessionalQR = async (data, restaurantName, options = {}) => {
+  return generateMinimalProfessionalQR(data, restaurantName, { ...options, compact: true });
+};
+
+/**
+ * Generate QR with Playfair Display font
+ */
+const generateQRWithPlayfairFont = async (data, restaurantName, playfairFontPath = null, options = {}) => {
+  return generateMinimalProfessionalQR(data, restaurantName, {
+    ...options,
+    playfairFontPath
+  });
+};
+
+/**
+ * Register Playfair Display font
+ */
+const registerPlayfairFont = (fontPath) => {
   try {
-    const canvasWidth = 350;
-    const canvasHeight = 450;
-    const canvas = createCanvas(canvasWidth, canvasHeight);
-    const ctx = canvas.getContext('2d');
-
-    // Burgundy background
-    ctx.fillStyle = '#800020';
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-    // Generate QR code
-    const qrOptions = {
-      text: data,
-      size: 250,
-      margin: 15,
-      correctLevel: AwesomeQR.CorrectLevel.M,
-      dotScale: 1.0,
-      colorDark: '#000000',
-      colorLight: '#FFFFFF',
-      ...options
-    };
-
-    let qrBuffer;
-    try {
-      qrBuffer = await new AwesomeQR(qrOptions).draw();
-    } catch (err) {
-      console.error('[QR] AwesomeQR failed:', err.message);
-      throw new Error('QR generation failed');
+    if (fs.existsSync(fontPath)) {
+      registerFont(fontPath, { family: 'Playfair Display' });
+      console.log('[QR] Playfair Display font registered successfully');
     }
-    const qrSizeBytes = Buffer.isBuffer(qrBuffer) ? qrBuffer.length : (qrBuffer?.byteLength || 0);
-
-    if (!qrBuffer || qrSizeBytes < 1024) {
-      console.warn('[QR] Buffer too small, fallback to base QR PNG');
-      return bufferToDataUrl(qrBuffer || Buffer.alloc(0));
-    }
-
-    let qrImage;
-    try {
-      qrImage = await loadImage(bufferToDataUrl(qrBuffer));
-      if (!qrImage || !qrImage.width || !qrImage.height) {
-        throw new Error('QR image failed to load');
-      }
-    } catch (err) {
-      console.error('[QR] loadImage failed, fallback to base QR PNG:', err.message);
-      return bufferToDataUrl(qrBuffer);
-    }
-
-    // Restaurant name
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 22px serif';
-    ctx.textAlign = 'center';
-    // Auto-adjust font size
-    let fontSize = 22;
-    const maxWidth = canvasWidth - 40;
-    while (ctx.measureText(restaurantName.toUpperCase()).width > maxWidth && fontSize > 14) {
-      fontSize -= 2;
-      ctx.font = `bold ${fontSize}px serif`;
-    }
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-    ctx.shadowBlur = 2;
-    ctx.shadowOffsetX = 1;
-    ctx.shadowOffsetY = 1;
-    ctx.fillText(restaurantName.toUpperCase(), canvasWidth / 2, 45);
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
-
-    // QR code with white background
-    const qrSize = 250;
-    const qrX = (canvasWidth - qrSize) / 2;
-    const qrY = 70;
-    const padding = 12;
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(qrX - padding, qrY - padding, qrSize + padding * 2, qrSize + padding * 2);
-    ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
-
-    // Scan text
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 16px serif';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-    ctx.shadowBlur = 2;
-    ctx.shadowOffsetX = 1;
-    ctx.shadowOffsetY = 1;
-    ctx.fillText('SCAN THE CODE TO ORDER', canvasWidth / 2, qrY + qrSize + 35);
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
-    // Powered by text in gold
-    ctx.fillStyle = '#FFD700';
-    ctx.font = 'bold 14px serif';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-    ctx.shadowBlur = 2;
-    ctx.shadowOffsetX = 1;
-    ctx.shadowOffsetY = 1;
-    ctx.fillText('POWERED BY QRUZINE', canvasWidth / 2, canvasHeight - 25);
-
-    // Check contrast: fallback if QR is blank
-    if (!hasContrast(ctx, qrX, qrY, qrSize, qrSize)) {
-      console.warn('[QR] QR region lacks contrast, fallback to base QR PNG');
-      return bufferToDataUrl(qrBuffer);
-    }
-
-    const base64Image = canvas.toDataURL('image/png', 0.95);
-    return base64Image;
   } catch (error) {
-    console.error('Compact professional QR generation error:', error);
-    throw new Error('Failed to generate compact professional QR code');
+    console.warn('[QR] Could not register Playfair Display font:', error.message);
   }
 };
 
 module.exports = {
   generateProfessionalQR,
   generateProfessionalQRWithLogo,
-  generateCompactProfessionalQR
+  generateCompactProfessionalQR,
+  generateQRWithPlayfairFont,
+  registerPlayfairFont,
+  generateMinimalProfessionalQR
 };
