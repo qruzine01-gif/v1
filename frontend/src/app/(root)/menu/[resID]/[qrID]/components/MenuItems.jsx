@@ -101,14 +101,14 @@ function VariantBottomSheet({ open, onClose, item, cart, onQuantityChange }) {
                           <div className="flex items-center gap-2">
                             <button
                               onClick={(e) => { e.stopPropagation(); onQuantityChange(composed, Math.max(0, qty - 1)) }}
-                              className="px-3 py-2 rounded-lg bg-black text-[#FFFAFA] active:scale-95 transition"
+                              className="px-3 py-2 rounded-lg text-[#FFFAFA] active:scale-95 transition" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}
                             >
                               <Minus className="w-5 h-5" />
                             </button>
                             <span className="text-[#FFFAFA] text-sm w-7 text-center">{qty}</span>
                             <button
                               onClick={(e) => { e.stopPropagation(); onQuantityChange(composed, qty + 1) }}
-                              className="px-3 py-2 rounded-lg bg-black text-[#FFFAFA] active:scale-95 transition"
+                              className="px-3 py-2 rounded-lg text-[#FFFAFA] active:scale-95 transition" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}
                             >
                               <Plus className="w-5 h-5" />
                             </button>
@@ -116,7 +116,7 @@ function VariantBottomSheet({ open, onClose, item, cart, onQuantityChange }) {
                         ) : (
                           <button
                             onClick={(e) => { e.stopPropagation(); onQuantityChange(composed, 1) }}
-                            className="px-4 py-2 rounded-lg bg-black text-[#FFFAFA] text-sm active:scale-95 transition"
+                            className="px-4 py-2 rounded-lg text-[#FFFAFA] text-sm active:scale-95 transition" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}
                           >
                             Add
                           </button>
@@ -144,19 +144,19 @@ function VariantControls({ parent, variant, quantity, onChange }) {
   }
   return (
     <div className="flex items-center justify-between mt-2">
-      <span className="text-xs text-gray-200">{variant.name} · ₹{variant.price.toFixed(2)}</span>
+      <span className="text-xs text-gray-700">{variant.name} · ₹{variant.price.toFixed(2)}</span>
       {quantity > 0 ? (
         <div className="flex items-center gap-1">
-          <button onClick={(e) => { e.stopPropagation(); onChange(composed, Math.max(0, quantity - 1)) }} className="p-2 rounded bg-black text-[#FFFAFA]">
-            <Minus className="w-4 h-4" />
+          <button onClick={(e) => { e.stopPropagation(); onChange(composed, Math.max(0, quantity - 1)) }} className="p-2 rounded" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}>
+            <Minus className="w-4 h-4 text-white" />
           </button>
-          <span className="text-sm text-[#FFFAFA] w-6 text-center">{quantity}</span>
-          <button onClick={(e) => { e.stopPropagation(); onChange(composed, quantity + 1) }} className="p-2 rounded bg-black text-[#FFFAFA]">
-            <Plus className="w-4 h-4" />
+          <span className="text-sm text-gray-900 w-6 text-center">{quantity}</span>
+          <button onClick={(e) => { e.stopPropagation(); onChange(composed, quantity + 1) }} className="p-2 rounded" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}>
+            <Plus className="w-4 h-4 text-white" />
           </button>
         </div>
       ) : (
-        <button onClick={(e) => { e.stopPropagation(); onChange(composed, 1) }} className="px-3 py-2 rounded bg-black text-[#FFFAFA] text-xs">Add</button>
+        <button onClick={(e) => { e.stopPropagation(); onChange(composed, 1) }} className="px-3 py-2 rounded bg-black text-xs" className="text-white">Add</button>
       )}
     </div>
   )
@@ -179,7 +179,8 @@ function MobileMenuItem({ item, quantity, onQuantityChange, cart }) {
             setIsExpanded(!isExpanded)
           }
         }} 
-        className="relative flex items-center gap-2 bg-[#510400] rounded-lg p-2 border border-black/60"
+        className="relative flex items-center gap-2 bg-white rounded-lg p-2 border-2 shadow-sm hover:shadow-md transition-shadow"
+        style={{ borderColor: 'rgb(212, 175, 55)' }}
       >
         {item.isSpecialItem && (
           <span className="absolute top-1 right-1 bg-[#800020] text-white text-[10px] px-2 py-0.5 rounded">Special</span>
@@ -189,14 +190,14 @@ function MobileMenuItem({ item, quantity, onQuantityChange, cart }) {
           alt={item.name} 
           loading="lazy"
           decoding="async"
-          className="w-1/5 h-16 object-cover rounded-md flex-shrink-0" 
+          className="w-1/5 h-16 object-cover rounded-md flex-shrink-0 border border-gray-200" 
         />
         <div className="flex-1">
-          <h3 className="text-sm font-semibold text-white leading-tight">{item.name}</h3>
+          <h3 className="text-sm font-semibold text-gray-900 leading-tight">{item.name}</h3>
           {(!item.variants?.length) ? (
-            <p className="text-xs text-[#FFFAFA] font-bold">₹{(item.price || 0).toFixed(2)}</p>
+            <p className="text-xs text-gray-900 font-bold">₹{(item.price || 0).toFixed(2)}</p>
           ) : (
-            <p className="text-xs text-[#FFFAFA] font-bold">From ₹{(lowestPrice || 0).toFixed(2)}</p>
+            <p className="text-xs text-gray-900 font-bold">From ₹{(lowestPrice || 0).toFixed(2)}</p>
           )}
         </div>
         {!item.variants?.length ? (
@@ -204,37 +205,38 @@ function MobileMenuItem({ item, quantity, onQuantityChange, cart }) {
             <div className="flex items-center gap-1">
               <button 
                 onClick={(e) => { e.stopPropagation(); onQuantityChange(item, Math.max(0, quantity - 1)) }} 
-                className="p-2 rounded bg-black text-[#FFFAFA]"
+                className="p-2 rounded" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}
               >
-                <Minus className="w-4 h-4" />
+                <Minus className="w-4 h-4 text-white" />
               </button>
-              <span className="text-sm text-[#FFFAFA] w-6 text-center">{quantity}</span>
+              <span className="text-sm text-gray-900 w-6 text-center font-semibold">{quantity}</span>
               <motion.button 
                 whileTap={{ scale: 0.95 }}
                 onClick={(e) => { e.stopPropagation(); onQuantityChange(item, quantity + 1); setBurstKey(k => k + 1) }} 
-                className="p-2 rounded bg-black text-[#FFFAFA]"
+                className="p-2 rounded" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-4 h-4 text-white" />
               </motion.button>
             </div>
           ) : (
             <motion.button 
               whileTap={{ scale: 0.95 }}
               onClick={(e) => { e.stopPropagation(); onQuantityChange(item, 1); setBurstKey(k => k + 1) }} 
-              className="p-2 rounded-full bg-black text-[#FFFAFA] flex items-center justify-center"
+              className="p-2 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-5 h-5 text-white" />
             </motion.button>
           )
         ) : (
           <motion.button
             whileTap={{ scale: 0.96 }}
             onClick={(e) => { e.stopPropagation(); setIsSheetOpen(true) }}
-            className="px-3 py-2 rounded-full bg-black text-[#FFFAFA] text-xs shadow hover:shadow-md active:scale-95 transition"
+            className="px-3 py-2 rounded-full text-xs shadow hover:shadow-md active:scale-95 transition" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}
+            style={{ color: 'rgb(212, 175, 55)' }}
           >
             Add
             {variantTotalQty > 0 && (
-              <span className="ml-1 inline-flex items-center justify-center min-w-4 px-1 h-4 text-[10px] bg-[#FFFAFA] text-black rounded-full">{variantTotalQty}</span>
+              <span className="ml-1 inline-flex items-center justify-center min-w-4 px-1 h-4 text-[10px] text-black rounded-full" style={{ backgroundColor: 'rgb(212, 175, 55)' }}>{variantTotalQty}</span>
             )}
           </motion.button>
         )}
@@ -258,8 +260,8 @@ function MobileMenuItem({ item, quantity, onQuantityChange, cart }) {
       </div>
 
       {isExpanded && (
-        <div className="mt-1 ml-1">
-          <p className="text-xs text-gray-200">{item.description}</p>
+        <div className="mt-1 ml-1 bg-gray-50 rounded-lg p-2 border-2" style={{ borderColor: 'rgb(212, 175, 55)' }}>
+          <p className="text-xs text-gray-700">{item.description}</p>
           {Array.isArray(item.variants) && item.variants.length > 0 && (
             <div className="mt-2 space-y-1">
               {item.variants.filter(v => v.isAvailable !== false).map(v => (
@@ -295,7 +297,7 @@ function MobileMenuItem({ item, quantity, onQuantityChange, cart }) {
 function DesktopMenuItem({ item, quantity, onQuantityChange, cart }) {
   const [burstKey, setBurstKey] = useState(0)
   return (
-    <div className="py-0.5 hidden md:flex flex-col rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border bg-[#510400] border-black/60 cursor-pointer relative">
+    <div className="py-0.5 hidden md:flex flex-col rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border-2 bg-white cursor-pointer relative" style={{ borderColor: 'rgb(212, 175, 55)' }}>
       {item.isSpecialItem && (
         <span className="absolute top-2 right-2 bg-black text-[#FFFAFA] text-xs px-2 py-1 rounded">Special</span>
       )}
@@ -307,27 +309,32 @@ function DesktopMenuItem({ item, quantity, onQuantityChange, cart }) {
         className="w-full h-48 object-cover" 
       />
       <div className="p-4 flex flex-col flex-1">
-        <h3 className="font-semibold text-lg mb-2 text-[#FFFAFA]">{item.name}</h3>
-        <p className="text-gray-200 text-sm mb-4 flex-1">{item.description}</p>
+        <h3 className="font-semibold text-lg mb-2 text-gray-900">{item.name}</h3>
+        <p className="text-gray-700 text-sm mb-4 flex-1">{item.description}</p>
         <div className="flex items-center justify-between">
           {(!item.variants?.length) ? (
-            <span className="font-bold text-[#FFFAFA]">₹{(item.price || 0).toFixed(2)}</span>
+            <span className="font-bold text-gray-900">₹{(item.price || 0).toFixed(2)}</span>
           ) : (
-            <span className="font-bold text-[#FFFAFA]">From ₹{Math.min(...item.variants.filter(v=>v.isAvailable!==false).map(v=>v.price)).toFixed(2)}</span>
+            <span className="font-bold text-gray-900">From ₹{Math.min(...item.variants.filter(v=>v.isAvailable!==false).map(v=>v.price)).toFixed(2)}</span>
           )}
           {!item.variants?.length && (quantity > 0 ? (
             <div className="flex items-center gap-1">
-              <button onClick={() => onQuantityChange(item, Math.max(0, quantity - 1))} className="p-2 rounded bg-black text-[#FFFAFA]">
-                <Minus className="w-5 h-5" />
+              <button onClick={() => onQuantityChange(item, Math.max(0, quantity - 1))} className="p-2 rounded" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}>
+                <Minus className="w-5 h-5 text-white" />
               </button>
-              <span className="text-[#FFFAFA] font-bold">{quantity}</span>
-              <motion.button whileTap={{ scale: 0.95 }} onClick={() => { onQuantityChange(item, quantity + 1); setBurstKey(k => k + 1) }} className="p-2 rounded bg-black text-[#FFFAFA]">
-                <Plus className="w-5 h-5" />
+              <span className="text-gray-900 font-bold">{quantity}</span>
+              <motion.button whileTap={{ scale: 0.95 }} onClick={() => { onQuantityChange(item, quantity + 1); setBurstKey(k => k + 1) }} className="p-2 rounded" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}>
+                <Plus className="w-5 h-5 text-white" />
               </motion.button>
             </div>
           ) : (
-            <motion.button whileTap={{ scale: 0.95 }} onClick={() => { onQuantityChange(item, 1); setBurstKey(k => k + 1) }} className="p-3 rounded-full bg-black text-[#FFFAFA] flex items-center justify-center">
-              <Plus className="w-5 h-5" />
+            <motion.button 
+                whileTap={{ scale: 0.95 }} 
+                onClick={() => { onQuantityChange(item, 1); setBurstKey(k => k + 1) }} 
+                className="p-3 rounded-full flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}
+              >
+              <Plus className="w-5 h-5 text-white" />
             </motion.button>
           ))}
         </div>
@@ -400,7 +407,7 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
   }
 
   return (
-    <div className="px-2 py-4">
+    <div className="px-2 py-4 bg-[#FFFAFA] min-h-screen">
       {/* Categories */}
       <div className="flex items-center justify-between pb-2 mb-3">
         <div className="flex gap-2 overflow-x-auto pr-2 [-ms-overflow-style:none] [scrollbar-width:none]" style={{ scrollbarWidth: 'none' }}>
@@ -411,12 +418,12 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
               className={`scroll-mx-4 snap-start whitespace-nowrap px-4 py-2 rounded-full text-sm md:text-base font-semibold transition-all shadow ${
                 activeCategory === cat
                   ? 'text-[#FFFAFA] shadow-lg border-2'
-                  : 'text-gray-200 border'
+                  : 'text-gray-700 border-2'
               }`}
               style={
                 activeCategory === cat
                   ? { background: 'linear-gradient(135deg, #800020 0%, #000000 100%)', borderColor: 'rgb(212, 175, 55)' }
-                  : { backgroundColor: 'rgba(30,30,30,0.6)', borderColor: 'rgba(0,0,0,0.6)' }
+                  : { backgroundColor: 'white', borderColor: 'rgb(229, 231, 235)' }
               }
             >
               {cat}
@@ -426,10 +433,10 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
         <div className="relative ml-3">
           <button
             onClick={() => setDietOpen(o => !o)}
-            className="px-4 py-2 rounded-full text-sm md:text-base font-semibold border shadow transition-all inline-flex items-center gap-2"
+            className="px-4 py-2 rounded-full text-sm md:text-base font-semibold border-2 shadow transition-all inline-flex items-center gap-2"
             style={(vegOnly || dietPreference === 'veg')
               ? { background: 'linear-gradient(135deg, #800020 0%, #000000 100%)', color: '#FFFAFA', borderColor: 'rgb(212, 175, 55)' }
-              : { backgroundColor: 'rgba(30,30,30,0.6)', color: 'rgb(229, 231, 235)', borderColor: 'rgba(0,0,0,0.6)' }}
+              : { backgroundColor: 'white', color: 'rgb(55, 65, 81)', borderColor: 'rgb(229, 231, 235)' }}
             aria-haspopup="menu"
             aria-expanded={dietOpen}
           >
@@ -443,8 +450,8 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 6 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                className="absolute right-0 mt-2 w-44 rounded-xl overflow-hidden border"
-                style={{ backgroundColor: 'rgba(15, 18, 15, 0.98)', borderColor: 'rgb(212, 175, 55)', zIndex: 60 }}
+                className="absolute right-0 mt-2 w-44 rounded-xl overflow-hidden border-2 shadow-lg"
+                style={{ backgroundColor: 'white', borderColor: 'rgb(212, 175, 55)', zIndex: 60 }}
                 role="menu"
               >
                 {[
@@ -456,8 +463,8 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
                   <button
                     key={opt.key}
                     onClick={() => { onDietPreferenceChange && onDietPreferenceChange(opt.key); setDietOpen(false) }}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-black/40"
-                    style={{ color: '#FFFAFA' }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                    style={{ color: 'rgb(55, 65, 81)' }}
                     role="menuitem"
                   >
                     {opt.label}
