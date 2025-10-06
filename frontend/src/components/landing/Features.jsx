@@ -37,23 +37,35 @@ const features = [
 
 export default function Features() {
   return (
-    <section id="features" className="bg-background-primary/10 py-16 md:py-20">
+    <section id="features" className="bg-[#FFFAFA] py-16 md:py-20">
       <div className="mx-auto max-w-7xl px-6">
-        <h2 className="heading-2 restaurant-gradient-text-strong text-outline-dark mb-2">Built for Restaurants</h2>
-        <p className="elegant-text-muted max-w-2xl mb-10">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-2" style={{ color: 'rgb(212, 175, 55)' }}>
+          Built for Restaurants
+        </h2>
+        <p className="text-center text-gray-700 max-w-2xl mx-auto mb-10">
           Qruzine is a full QR-based ordering product by Vigyapanwala, engineered for enterprise reliability and delightful dining experiences.
         </p>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="menu-item-card p-5 hover:shadow-luxury">
+            <div 
+              key={title} 
+              className="p-5 rounded-xl border-2 shadow-md hover:shadow-xl transition-all duration-300"
+              style={{ 
+                background: 'linear-gradient(135deg, #800020 0%, #000000 100%)',
+                borderColor: 'rgb(212, 175, 55)'
+              }}
+            >
               <div className="flex items-start gap-4">
-                <div className="bronze-bg inline-flex items-center justify-center w-11 h-11 rounded-md">
-                  <Icon className="text-forest-dark" />
+                <div 
+                  className="inline-flex items-center justify-center w-11 h-11 rounded-md"
+                  style={{ backgroundColor: 'rgb(212, 175, 55)' }}
+                >
+                  <Icon className="text-black w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="heading-4 mb-1">{title}</h3>
-                  <p className="text-small elegant-text-muted">{desc}</p>
+                  <h3 className="text-lg font-semibold mb-1 text-white">{title}</h3>
+                  <p className="text-sm text-gray-300">{desc}</p>
                 </div>
               </div>
             </div>
@@ -63,4 +75,3 @@ export default function Features() {
     </section>
   );
 }
-

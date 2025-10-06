@@ -98,6 +98,10 @@ const drawWrappedCentered = (ctx, text, options) => {
     minSize = 28,
     maxLines = 2,
     transform = (s) => s.toUpperCase(),
+    // Optional styling
+    strokeStyle,
+    strokeWidth = 2,
+    fillStyle,
   } = options;
 
   let size = initialSize;
@@ -117,30 +121,19 @@ const drawWrappedCentered = (ctx, text, options) => {
   const totalHeight = lineHeight * (lines.length - 1);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
+  if (fillStyle) ctx.fillStyle = fillStyle;
   lines.forEach((line, idx) => {
     const y = centerY - totalHeight / 2 + idx * lineHeight;
+    if (strokeStyle) {
+      ctx.save();
+      ctx.lineWidth = strokeWidth;
+      ctx.strokeStyle = strokeStyle;
+      ctx.strokeText(transform(line), centerX, y);
+      ctx.restore();
+    }
     ctx.fillText(transform(line), centerX, y);
   });
   return size;
-};
-
-/**
- * Generate a safe base QR code PNG using qrcode library as fallback
- */
-const generateSafeBaseQR = async (data) => {
-  try {
-    //console.log('[QR] Generating safe base QR using qrcode library');
-    const dataUrl = await QRCodeLib.toDataURL(data, {
-      errorCorrectionLevel: 'H',
-      width: 512,
-      margin: 4,
-      color: { dark: '#000000', light: '#FFFFFF' },
-    });
-    return dataUrl;
-  } catch (error) {
-    //console.error('[QR] Safe base QR generation failed:', error);
-    throw error;
-  }
 };
 
 /**
@@ -269,17 +262,17 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       
       const burgundy = '#6B0D13';
       const cream = '#FFF2DC';
-      const red = '#B22020';
       const gold = '#D4AF37';
 
-      // Background
-      ctx.fillStyle = burgundy;
+      // Background (snow white shade)
+      ctx.fillStyle = '#FFFAFA';
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
       //console.log('[QR] Background drawn');
 
       // Title (auto-wrap for long names)
       const title = (restaurantName || 'RESTAURANT NAME').trim();
-      ctx.fillStyle = cream;
+      // Title as gold text (no stroke)
+      ctx.fillStyle = gold;
       ctx.shadowColor = 'rgba(0,0,0,0.25)';
       ctx.shadowBlur = 4;
       ctx.shadowOffsetX = 2;
@@ -295,6 +288,7 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
         minSize: 20,
         maxLines: 2,
         transform: (s) => s.toUpperCase(),
+        fillStyle: gold,
       });
       
       ctx.shadowColor = 'transparent';
@@ -414,7 +408,11 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       const pillY = panelY + panelH + 40;
       
       roundRect(pillX, pillY, pillW, pillH, 24);
-      ctx.fillStyle = red;
+      // Apply 135° gradient background (top-left to bottom-right)
+      const pillGradient = ctx.createLinearGradient(pillX, pillY, pillX + pillW, pillY + pillH);
+      pillGradient.addColorStop(0, '#800020');
+      pillGradient.addColorStop(1, '#000000');
+      ctx.fillStyle = pillGradient;
       ctx.shadowColor = 'rgba(0,0,0,0.25)';
       ctx.shadowBlur = 6;
       ctx.shadowOffsetX = 0;
@@ -424,7 +422,13 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       ctx.shadowBlur = 0;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
+      // Gold border stroke for CTA pill
+      roundRect(pillX, pillY, pillW, pillH, 24);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgb(212, 175, 55)';
+      ctx.stroke();
       
+      // CTA text styling (white)
       ctx.fillStyle = '#FFFFFF';
       let scanSize = 32;
       ctx.font = `700 ${scanSize}px ${fontFamily}`;

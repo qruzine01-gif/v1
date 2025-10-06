@@ -5,7 +5,12 @@ export default function CTA() {
   return (
     <section className="py-20 bg-burgundy-gradient text-text-light">
       <div className="mx-auto max-w-7xl px-6">
-        <div className="content-panel p-8 md:p-10 grid md:grid-cols-2 gap-8 items-center">
+        <div className=" p-8 md:p-10 grid md:grid-cols-2 gap-8 items-center border-radius-[50px]"
+        style={{ 
+          background: 'linear-gradient(135deg, #800020 0%, #000000 100%)',
+          borderColor: 'rgb(212, 175, 55)',
+          borderRadius: '25px',
+        }}>
           <div>
             <h2 className="heading-2">Ready to modernize your ordering?</h2>
             <p className="text-large elegant-text-muted mt-3">

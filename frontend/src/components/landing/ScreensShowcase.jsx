@@ -11,7 +11,7 @@ export default function ScreensShowcase() {
     restaurantMenu: {
       title: "Restaurant Menu",
       description: "Beautiful digital menu for your customers to browse and order from their devices.",
-      image: "/images/landing/menu.jpg",
+      image: "/images/landing/menuu.jpeg",
       type: 'mobile',
       features: [
         "Category-based menu organization",
@@ -27,7 +27,7 @@ export default function ScreensShowcase() {
     checkout: {
       title: "Checkout Process",
       description: "Streamlined checkout experience for your customers with multiple payment options.",
-      image: "/images/checkout.jpg",
+      image: "/images/landing/checkout.jpeg",
       type: 'mobile',
       features: [
         "Secure payment processing",
