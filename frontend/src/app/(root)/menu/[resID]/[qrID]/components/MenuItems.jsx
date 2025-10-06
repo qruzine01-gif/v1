@@ -116,7 +116,8 @@ function VariantBottomSheet({ open, onClose, item, cart, onQuantityChange }) {
                         ) : (
                           <button
                             onClick={(e) => { e.stopPropagation(); onQuantityChange(composed, 1) }}
-                            className="px-4 py-2 rounded-lg text-[#FFFAFA] text-sm active:scale-95 transition" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}
+                            className="px-4 py-2 rounded-lg text-[#FFFAFA] text-sm active:scale-95 transition"
+                            style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}
                           >
                             Add
                           </button>
@@ -156,7 +157,13 @@ function VariantControls({ parent, variant, quantity, onChange }) {
           </button>
         </div>
       ) : (
-        <button onClick={(e) => { e.stopPropagation(); onChange(composed, 1) }} className="px-3 py-2 rounded bg-black text-xs" className="text-white">Add</button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onChange(composed, 1) }}
+          className="px-3 py-2 rounded text-white text-xs"
+          style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}
+        >
+          Add
+        </button>
       )}
     </div>
   )
@@ -231,8 +238,8 @@ function MobileMenuItem({ item, quantity, onQuantityChange, cart }) {
           <motion.button
             whileTap={{ scale: 0.96 }}
             onClick={(e) => { e.stopPropagation(); setIsSheetOpen(true) }}
-            className="px-3 py-2 rounded-full text-xs shadow hover:shadow-md active:scale-95 transition" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}
-            style={{ color: 'rgb(212, 175, 55)' }}
+            className="px-3 py-2 rounded-full text-[#FFFAFA] text-xs shadow hover:shadow-md active:scale-95 transition"
+            style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}
           >
             Add
             {variantTotalQty > 0 && (

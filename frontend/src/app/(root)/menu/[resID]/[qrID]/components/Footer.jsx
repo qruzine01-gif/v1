@@ -73,17 +73,21 @@ export default function Footer({ restaurant }) {
 
         <div className="border-t mt-6 pt-6 text-center" style={{ borderColor: 'rgba(212, 175, 55, 0.3)' }}>
           <p className="text-sm text-gray-400">© {year} {restaurant?.name || 'Restaurant'}. All rights reserved.</p>
-          <p className="text-xs text-gray-500 mt-1">Powered by <span className="font-semibold" style={{ color: 'rgb(212, 175, 55)' }}>Qruzine</span></p>
+          <p className="text-xs text-gray-500 mt-1">Powered by <span className="font-semibold vw-anim " style={{ color: 'rgb(212, 175, 55)' }}>Qruzine</span></p>
+          
           <p className="text-xs text-gray-500 mt-1">
             <a
               href="https://www.vigyapanwala.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold hover:underline vw-anim"
+              className="font-bold hover:underline"
+              style={{ letterSpacing: '0.3em', color: 'rgb(212, 175, 55)' }}
             >
-              Vigyapanwala product
+              V I G Y A P A N W A L A
             </a>
+            
           </p>
+          
         </div>
       </div>
       <style jsx>{`
