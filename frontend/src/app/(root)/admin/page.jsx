@@ -13,6 +13,7 @@ import AddRestaurantModal from '../../../components/admin/AddRestaurantModal';
 import CouponModal from '../../../components/admin/CouponModal';
 import BugsModal from '../../../components/admin/BugsModal';
 import BannerManager from '../../../components/admin/BannerManager';
+import LogoutButton from '../../../components/admin/LogoutButton';
 
 // Toast Component
 const Toast = ({ toast, onClose }) => {
@@ -459,14 +460,26 @@ const AdminDashboard = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6 md:mb-8">
-          {/* Mobile: inline logo with title to avoid overlap */}
-          <div className="flex items-center gap-2 md:hidden">
-            <Image src="/images/logo.png" alt="Logo" width={28} height={28} className="object-contain" priority />
-            <h1 className="text-2xl font-bold text-gray-900">Super Admin Dashboard</h1>
+          <div className="flex items-center justify-between md:items-start">
+            <div>
+              {/* Mobile: inline logo with title to avoid overlap */}
+              <div className="flex items-center gap-2 md:hidden">
+                <Image src="/images/logo.png" alt="Logo" width={28} height={28} className="object-contain" priority />
+                <h1 className="text-2xl font-bold text-gray-900">Super Admin Dashboard</h1>
+              </div>
+              {/* Desktop: larger standalone title */}
+              <h1 className="hidden md:block text-3xl font-bold text-gray-900 mb-2">Super Admin Dashboard</h1>
+              <p className="text-sm md:text-base text-gray-600">Manage restaurants and monitor platform performance</p>
+            </div>
+            {/* Desktop logout button */}
+            <div className="hidden md:block">
+              <LogoutButton variant="outline" />
+            </div>
           </div>
-          {/* Desktop: larger standalone title */}
-          <h1 className="hidden md:block text-3xl font-bold text-gray-900 mb-2">Super Admin Dashboard</h1>
-          <p className="text-sm md:text-base text-gray-600">Manage restaurants and monitor platform performance</p>
+          {/* Mobile logout button */}
+          <div className="md:hidden mt-3">
+            <LogoutButton variant="outline" size="sm" />
+          </div>
         </div>
 
         {/* Dashboard Stats */}
