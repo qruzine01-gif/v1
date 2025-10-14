@@ -15,6 +15,26 @@ const QRCodeLib = require('qrcode');
 // Set QR_DEBUG=1 to enable extra logging.
 const QR_DEBUG = process.env.QR_DEBUG === '1' || process.env.QR_DEBUG === 'true';
 
+// Fallback QR generator using the qrcode library that returns a PNG data URL
+// Used when AwesomeQR fails or as a last resort in production
+const generateSafeBaseQR = async (text) => {
+  try {
+    const dataUrl = await QRCodeLib.toDataURL(text, {
+      errorCorrectionLevel: 'H',
+      margin: 2,
+      scale: 10,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF',
+      },
+      // type defaults to image/png for toDataURL
+    });
+    return dataUrl;
+  } catch (e) {
+    throw new Error('qrcode fallback failed: ' + e.message);
+  }
+};
+
 const bufferToDataUrl = (buf) => {
   let nodeBuf;
   if (Buffer.isBuffer(buf)) nodeBuf = buf;
