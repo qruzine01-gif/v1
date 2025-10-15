@@ -271,7 +271,7 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       //console.log('[QR] Starting canvas composition');
       
       const canvasWidth = 682;
-      const canvasHeight = 1024;
+      const canvasHeight = 1224;
       const canvas = createCanvas(canvasWidth, canvasHeight);
       const ctx = canvas.getContext('2d');
       
@@ -304,7 +304,7 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
         maxWidth: canvasWidth - 160,
         fontFamily,
         weight: '900',
-        initialSize: 64,
+        initialSize: 56,
         minSize: 20,
         maxLines: 2,
         transform: (s) => s.toUpperCase(),
@@ -321,7 +321,7 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       const panelW = 520;
       const panelH = 520;
       const panelX = (canvasWidth - panelW) / 2;
-      const panelY = 210;
+      const panelY = 228; // gentle extra spacing below title
       
       const roundRect = (x, y, w, h, r) => {
         const rr = Math.min(r, w / 2, h / 2);
@@ -421,11 +421,215 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
         return qrDataUrl;
       }
 
+      // Middle caption between QR and icons
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#4A5568';
+      const midCaption = (options && (options.qrLabel || options.qrName || options.qrType)) || 'Digital Menu Scan To Order';
+
+      // Compute position and auto-size to fit without overlapping QR or icons
+      const instructionsTop = panelY + panelH + 66; // gentle spacing between QR and icons
+      const bandTop = panelY + panelH + 16;  // margin below QR panel
+      const bandBottom = instructionsTop - 16; // margin above icons row
+      const bandHeight = Math.max(1, bandBottom - bandTop);
+      let midSize = 42; // start bigger
+      const maxMidWidth = canvasWidth - 140; // slightly wider allowance
+      ctx.font = `700 ${midSize}px ${fontFamily}`;
+      while ((ctx.measureText(midCaption).width > maxMidWidth || midSize > bandHeight) && midSize > 18) {
+        midSize -= 1;
+        ctx.font = `700 ${midSize}px ${fontFamily}`;
+      }
+      const midY = bandTop + bandHeight / 2; // centered in the band
+      ctx.fillText(midCaption, canvasWidth / 2, midY);
+      const circleD = 120;
+      const circleR = circleD / 2;
+      const stepsGap = 40;
+      const totalStepsWidth = circleD * 4 + stepsGap * 3;
+      const startX = (canvasWidth - totalStepsWidth) / 2 + circleR;
+      const circleY = instructionsTop + circleR;
+
+      const drawCircle = (cx, cy, r) => {
+        ctx.beginPath();
+        ctx.fillStyle = '#E9EEF5';
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+      };
+
+      const drawLens = (cx, cy) => {
+        ctx.save();
+        ctx.lineWidth = 10;
+        ctx.strokeStyle = '#4285F4';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 26, -Math.PI / 4, Math.PI / 4);
+        ctx.stroke();
+        ctx.strokeStyle = '#EA4335';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 26, Math.PI / 4, (3 * Math.PI) / 4);
+        ctx.stroke();
+        ctx.strokeStyle = '#34A853';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 26, (3 * Math.PI) / 4, (5 * Math.PI) / 4);
+        ctx.stroke();
+        ctx.strokeStyle = '#FBBC05';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 26, (5 * Math.PI) / 4, (7 * Math.PI) / 4);
+        ctx.stroke();
+        ctx.fillStyle = '#4285F4';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      };
+
+      const drawCamera = (cx, cy) => {
+        ctx.save();
+        ctx.strokeStyle = '#1F2D3D';
+        ctx.lineWidth = 6;
+        const w = 64, h = 40, r = 8;
+        const x = cx - w / 2, y = cy - h / 2;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = '#1F7AFC';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      const drawPhoneQR = (cx, cy) => {
+        ctx.save();
+        ctx.strokeStyle = '#1F2D3D';
+        ctx.lineWidth = 5;
+        const w = 48, h = 74, r = 8;
+        const x = cx - w / 2, y = cy - h / 2;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.stroke();
+        ctx.fillStyle = '#1F7AFC';
+        ctx.fillRect(x + 12, y + 18, 8, 8);
+        ctx.fillRect(x + 26, y + 18, 8, 8);
+        ctx.fillRect(x + 12, y + 32, 8, 8);
+        ctx.fillStyle = '#1F2D3D';
+        ctx.fillRect(x + 26, y + 32, 8, 8);
+        ctx.restore();
+      };
+
+      const drawTap = (cx, cy) => {
+        ctx.save();
+        ctx.strokeStyle = '#1F2D3D';
+        ctx.lineWidth = 5;
+        const w = 46, h = 70, r = 8;
+        const x = cx - w / 2, y = cy - h / 2;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.stroke();
+        ctx.fillStyle = '#1F7AFC';
+        ctx.fillRect(x + w - 24, y + 10, 16, 12);
+        ctx.strokeStyle = '#1F2D3D';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(cx - 6, cy + 8);
+        ctx.lineTo(cx - 6, cy + 28);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx - 6, cy + 8, 6, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      // Try to load custom Google Search icon if provided
+      let googleSearchIconImage = null;
+      try {
+        let iconPath = (options && options.googleSearchIconPath) || process.env.GOOGLE_SEARCH_ICON;
+        if (!iconPath) {
+          const defaultIconPath = path.join(__dirname, '..', 'public', 'images', 'google.png');
+          if (fs.existsSync(defaultIconPath)) {
+            iconPath = defaultIconPath;
+          }
+        }
+        if (iconPath && fs.existsSync(iconPath)) {
+          googleSearchIconImage = await loadImage(iconPath);
+        }
+      } catch (_) { /* ignore icon load failure */ }
+
+      const centers = [0, 1, 2, 3].map(i => startX + i * (circleD + stepsGap));
+      centers.forEach(c => drawCircle(c, circleY, circleR));
+      if (googleSearchIconImage) {
+        // Draw the provided icon centered within the first circle, keeping aspect ratio
+        const maxIconSize = circleD * 0.68; // leave padding inside the circle
+        const iw = googleSearchIconImage.width || maxIconSize;
+        const ih = googleSearchIconImage.height || maxIconSize;
+        const scale = Math.min(maxIconSize / iw, maxIconSize / ih);
+        const dw = iw * scale;
+        const dh = ih * scale;
+        ctx.drawImage(
+          googleSearchIconImage,
+          centers[0] - dw / 2,
+          circleY - dh / 2,
+          dw,
+          dh
+        );
+      } else {
+        drawLens(centers[0], circleY);
+      }
+      drawCamera(centers[1], circleY);
+      drawPhoneQR(centers[2], circleY);
+      drawTap(centers[3], circleY);
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = '#4A5568';
+      ctx.font = `700 16px ${fontFamily}`;
+      const labelY = instructionsTop + circleD + 36;
+      ctx.fillText('Open Google Search', centers[0], labelY);
+      ctx.fillStyle = '#4A5568';
+      ctx.fillText('Turn on camera', centers[1], labelY);
+      ctx.fillText('Frame the QR', centers[2], labelY);
+      ctx.fillText('Click the pop-up', centers[3], labelY);
+
+      // Center the OR between the first two icons
+      ctx.save();
+      ctx.fillStyle = '#E1584B';
+      ctx.textBaseline = 'middle';
+      ctx.font = `800 20px ${fontFamily}`;
+      ctx.fillText('OR', (centers[0] + centers[1]) / 2, circleY);
+      ctx.restore();
+
+      const instructionsHeight = circleD + 56;
+
       // Red pill CTA
       const pillW = 520;
       const pillH = 96;
       const pillX = (canvasWidth - pillW) / 2;
-      const pillY = panelY + panelH + 40;
+      const pillY = instructionsTop + instructionsHeight + 28; // gentle extra spacing below icons
       
       roundRect(pillX, pillY, pillW, pillH, 24);
       // Apply 135° gradient background (top-left to bottom-right)
@@ -455,7 +659,7 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       
-      const lines = ['SCAN THE CODE', 'TO ORDER'];
+      const lines = ['Digital Menu', 'Scan To Order'];
       const maxScanWidth = pillW - 80;
       
       while (Math.max(...lines.map(l => ctx.measureText(l).width)) > maxScanWidth && scanSize > 20) {
@@ -472,25 +676,33 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       ctx.textBaseline = 'alphabetic';
       //console.log('[QR] CTA button drawn');
 
-      // Gold footer branding
+      // Gold footer branding (aligned sizes)
       ctx.fillStyle = gold;
       ctx.shadowColor = 'rgba(0,0,0,0.3)';
       ctx.shadowBlur = 4;
       ctx.shadowOffsetX = 1;
       ctx.shadowOffsetY = 2;
-      ctx.font = `800 24px ${fontFamily}`;
-      ctx.fillText('POWERED BY', canvasWidth / 2, canvasHeight - 90);
-      
-      let brandSize = 40;
-      ctx.font = `900 ${brandSize}px ${fontFamily}`;
-      const maxBrand = canvasWidth - 120;
-      
-      while (ctx.measureText('QRUZINE').width > maxBrand && brandSize > 28) {
-        brandSize -= 2;
-        ctx.font = `900 ${brandSize}px ${fontFamily}`;
+
+      // Compute a common font size so both lines share the same size
+      let footerSize = 40;
+      const maxFooterWidth = canvasWidth - 120;
+      ctx.font = `900 ${footerSize}px ${fontFamily}`;
+      while (
+        Math.max(
+          ctx.measureText('POWERED BY').width,
+          ctx.measureText('QRUZINE').width
+        ) > maxFooterWidth && footerSize > 20
+      ) {
+        footerSize -= 2;
+        ctx.font = `900 ${footerSize}px ${fontFamily}`;
       }
-      
-      ctx.fillText('QRUZINE', canvasWidth / 2, canvasHeight - 30);
+      // Reduce slightly more for a gentler look
+      footerSize = Math.max(18, footerSize - 4);
+      ctx.font = `900 ${footerSize}px ${fontFamily}`;
+
+      ctx.textAlign = 'center';
+      ctx.fillText('POWERED BY', canvasWidth / 2, canvasHeight - 56);
+      ctx.fillText('QRUZINE', canvasWidth / 2, canvasHeight - 12);
       //console.log('[QR] Footer branding drawn');
 
       // Convert to data URL

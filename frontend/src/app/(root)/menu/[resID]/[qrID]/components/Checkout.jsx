@@ -202,7 +202,7 @@ export default function Checkout({
                       <div>
                         <label className="block text-xs md:text-sm font-medium mb-2" style={{ color: 'rgb(212, 175, 55)' }}>
                           <Calendar className="h-4 w-4 inline mr-2" />
-                          Date of Birth (Optional)
+                          Anniversary (Optional)
                         </label>
                         <input
                           type="date"
