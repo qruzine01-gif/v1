@@ -179,6 +179,21 @@ class ApiService {
     return this.get(`/menu/subadmin/${resID}${queryParams ? `?${queryParams}` : ''}`);
   }
 
+  // Bulk add multiple items into a category (optional shared image)
+  async bulkAddMenuItems(resID, payload) {
+    return this.post(`/menu/subadmin/${resID}/bulk`, payload);
+  }
+
+  // Seed ~10 demo menu items for a restaurant (subadmin scope)
+  async seedRestaurantMenu(resID) {
+    return this.post(`/menu/subadmin/${resID}/seed`);
+  }
+
+  // Clear all seeded demo items for a restaurant (subadmin scope)
+  async clearRestaurantSeed(resID) {
+    return this.delete(`/menu/subadmin/${resID}/seed`);
+  }
+
   async addMenuItem(resID, menuData) {
     return this.post(`/menu/subadmin/${resID}`, menuData);
   }

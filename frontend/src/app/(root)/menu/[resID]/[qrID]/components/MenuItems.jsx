@@ -169,6 +169,8 @@ function VariantControls({ parent, variant, quantity, onChange }) {
   )
 }
 
+// Replace only the MobileMenuItem(...) function in your MenuItems file with the code below.
+
 function MobileMenuItem({ item, quantity, onQuantityChange, cart }) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
@@ -177,7 +179,8 @@ function MobileMenuItem({ item, quantity, onQuantityChange, cart }) {
   const variantTotalQty = getVariantTotalQty(cart, item)
 
   return (
-    <div className="py-0.5 block md:hidden cursor-pointer">
+    // visible until lg (mobile + tablet). Desktop will use DesktopMenuItem for lg+
+    <div className="py-0.5 block lg:hidden cursor-pointer overflow-visible">
       <div 
         onClick={() => {
           if (Array.isArray(item.variants) && item.variants.length > 0) {
@@ -186,11 +189,21 @@ function MobileMenuItem({ item, quantity, onQuantityChange, cart }) {
             setIsExpanded(!isExpanded)
           }
         }} 
-        className="relative flex items-center gap-2 bg-white rounded-lg p-2 border-2 shadow-sm hover:shadow-md transition-shadow"
+        className="relative flex items-center gap-2 bg-white rounded-lg p-2 border-2 shadow-sm hover:shadow-md transition-shadow overflow-visible"
         style={{ borderColor: 'rgb(212, 175, 55)' }}
       >
+        {/* Diagonal ribbon only on mobile+tablet (this container is hidden on lg) */}
         {item.isSpecialItem && (
-          <span className="absolute top-1 right-1 bg-[#800020] text-white text-[10px] px-2 py-0.5 rounded">Special</span>
+          // moved ribbon container inside the clickable card, but allowed overflow-visible on the card so it is not clipped
+          <div className="absolute -top-3 -left-5 md:-left-8 z-20 pointer-events-none overflow-visible">
+            <span
+              aria-hidden="true"
+              className="inline-block bg-gradient-to-r from-[#800020] to-black text-white text-[8px] font-bold px-3 py-1 rounded shadow-lg transform -rotate-12"
+              style={{ boxShadow: "0 6px 18px rgba(0,0,0,0.35)" }}
+            >
+              Special
+            </span>
+          </div>
         )}
         <img 
           src={item.image} 
@@ -301,19 +314,35 @@ function MobileMenuItem({ item, quantity, onQuantityChange, cart }) {
   )
 }
 
+// Replace the existing DesktopMenuItem(...) function in your MenuItems file with the code below.
+
 function DesktopMenuItem({ item, quantity, onQuantityChange, cart }) {
   const [burstKey, setBurstKey] = useState(0)
   return (
-    <div className="py-0.5 hidden md:flex flex-col rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border-2 bg-white cursor-pointer relative" style={{ borderColor: 'rgb(212, 175, 55)' }}>
+    // Desktop layout now appears at lg and above
+    <div
+      className="py-0.5 hidden lg:flex flex-col rounded-xl overflow-visible shadow-md hover:shadow-xl transition-all duration-300 border-2 bg-white cursor-pointer relative"
+      style={{ borderColor: 'rgb(212, 175, 55)' }}
+    >
+      {/* Diagonal ribbon for desktop (allowed to overflow because parent is overflow-visible) */}
       {item.isSpecialItem && (
-        <span className="absolute top-2 right-2 bg-black text-[#FFFAFA] text-xs px-2 py-1 rounded">Special</span>
+        <div className="absolute -top-3 -left-5 md:-left-8 z-30 pointer-events-none">
+          <span
+            aria-hidden="true"
+            className="inline-block bg-gradient-to-r from-[#800020] to-black text-white text-[10px] font-bold px-3 py-1 rounded shadow-lg transform -rotate-12"
+            style={{ boxShadow: "0 6px 18px rgba(0,0,0,0.35)" }}
+          >
+            Special
+          </span>
+        </div>
       )}
-      <img 
-        src={item.image} 
-        alt={item.name} 
+
+      <img
+        src={item.image}
+        alt={item.name}
         loading="lazy"
         decoding="async"
-        className="w-full h-48 object-cover" 
+        className="w-full h-48 object-cover"
       />
       <div className="p-4 flex flex-col flex-1">
         <h3 className="font-semibold text-lg mb-2 text-gray-900">{item.name}</h3>
@@ -335,12 +364,12 @@ function DesktopMenuItem({ item, quantity, onQuantityChange, cart }) {
               </motion.button>
             </div>
           ) : (
-            <motion.button 
-                whileTap={{ scale: 0.95 }} 
-                onClick={() => { onQuantityChange(item, 1); setBurstKey(k => k + 1) }} 
-                className="p-3 rounded-full flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}
-              >
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => { onQuantityChange(item, 1); setBurstKey(k => k + 1) }}
+              className="p-3 rounded-full flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}
+            >
               <Plus className="w-5 h-5 text-white" />
             </motion.button>
           ))}
@@ -483,7 +512,7 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
         </div>
       </div>
 
-      {/* Mobile Items */}
+      {/* Mobile + Tablet Items (visible until lg) */}
       <div className="space-y-1">
         {filteredItems.map((item, index) => (
           <div key={item.id || item.menuID || index}>
@@ -503,8 +532,8 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
         ))}
       </div>
 
-      {/* Desktop Items */}
-      <div className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {/* Desktop Items (lg and up) */}
+      <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {filteredItems.map((item, index) => {
           if (
             activeCategory === "All" &&

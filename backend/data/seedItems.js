@@ -1,0 +1,176 @@
+// Seed dataset: 20+ items across categories with images, variants, and specials
+// Image URLs can be replaced with your Cloudinary assets if desired
+
+module.exports = {
+  Appetizers: [
+    {
+      name: "Garlic Bread Supreme",
+      description: "Toasted baguette with herbed garlic butter",
+      basePrice: 99,
+      isVegetarian: true,
+      image: "https://images.unsplash.com/photo-1546554137-f86b9593a222?q=80&w=1200&auto=format&fit=crop",
+      preparationTime: 10,
+    },
+    {
+      name: "Chicken Tikka Bites",
+      description: "Smoky, spiced chicken skewers with mint dip",
+      basePrice: 219,
+      image: "https://images.unsplash.com/photo-1601050690597-9fd86ad6e2b3?q=80&w=1200&auto=format&fit=crop",
+      preparationTime: 15,
+    },
+    {
+      name: "Paneer Tikka",
+      description: "Marinated cottage cheese grilled to perfection",
+      basePrice: 199,
+      isVegetarian: true,
+      image: "https://images.unsplash.com/photo-1625944525508-0f4a7a8d5e8b?q=80&w=1200&auto=format&fit=crop",
+      preparationTime: 14,
+    },
+    {
+      name: "Stuffed Mushrooms",
+      description: "Cheese and herb stuffed button mushrooms",
+      basePrice: 179,
+      isVegetarian: true,
+      image: "https://images.unsplash.com/photo-1512058564366-18510be2db19?q=80&w=1200&auto=format&fit=crop",
+      preparationTime: 12,
+    },
+  ],
+  "Main Course": [
+    {
+      name: "Veg Biryani",
+      description: "Aromatic basmati rice with seasonal vegetables",
+      basePrice: 249,
+      isVegetarian: true,
+      image: "https://images.unsplash.com/photo-1596797038530-2c107229b3cd?q=80&w=1200&auto=format&fit=crop",
+      preparationTime: 25,
+      variants: [
+        { name: "Regular", price: 249, isAvailable: true },
+        { name: "Large", price: 299, isAvailable: true },
+      ],
+    },
+    {
+      name: "Chicken Biryani",
+      description: "Hyderabadi style biryani slow-cooked",
+      basePrice: 299,
+      image: "https://images.unsplash.com/photo-1604908812112-3e4e39fb1aba?q=80&w=1200&auto=format&fit=crop",
+      preparationTime: 30,
+      variants: [
+        { name: "Regular", price: 299, isAvailable: true },
+        { name: "Family", price: 549, isAvailable: true },
+      ],
+      isSpecialItem: true,
+    },
+    {
+      name: "Butter Chicken",
+      description: "Creamy tomato gravy with tender chicken",
+      basePrice: 329,
+      image: "https://images.unsplash.com/photo-1625944525508-0f4a7a8d5e8b?q=80&w=1200&auto=format&fit=crop",
+      preparationTime: 22,
+      isSpecialItem: true,
+    },
+    {
+      name: "Paneer Butter Masala",
+      description: "Rich and creamy tomato-cashew gravy",
+      basePrice: 299,
+      isVegetarian: true,
+      image: "https://images.unsplash.com/photo-1633945274405-2f1b7a32bdec?q=80&w=1200&auto=format&fit=crop",
+    },
+    {
+      name: "Margherita Pizza",
+      description: "Classic pizza with basil and mozzarella",
+      basePrice: 399,
+      isVegetarian: true,
+      image: "https://images.unsplash.com/photo-1548365328-9f547fb0953b?q=80&w=1200&auto=format&fit=crop",
+      variants: [
+        { name: "Medium", price: 399, isAvailable: true },
+        { name: "Large", price: 499, isAvailable: true },
+      ],
+    },
+    {
+      name: "Pepperoni Pizza",
+      description: "Loaded with pepperoni and cheese",
+      basePrice: 449,
+      image: "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?q=80&w=1200&auto=format&fit=crop",
+      variants: [
+        { name: "Medium", price: 449 },
+        { name: "Large", price: 549 },
+      ],
+      isSpecialItem: true,
+    },
+  ],
+  Desserts: [
+    {
+      name: "Gulab Jamun",
+      description: "Warm syrupy dumplings",
+      basePrice: 99,
+      isVegetarian: true,
+      image: "https://images.unsplash.com/photo-1604908554049-1da43c6503cb?q=80&w=1200&auto=format&fit=crop",
+    },
+    {
+      name: "Brownie with Ice Cream",
+      description: "Chocolate brownie topped with vanilla ice cream",
+      basePrice: 179,
+      isVegetarian: true,
+      image: "https://images.unsplash.com/photo-1606313564200-e75d5e30476e?q=80&w=1200&auto=format&fit=crop",
+      isSpecialItem: true,
+    },
+    {
+      name: "Cheesecake",
+      description: "Creamy New York cheesecake",
+      basePrice: 229,
+      isVegetarian: true,
+      image: "https://images.unsplash.com/photo-1499028344343-cd173ffc68a9?q=80&w=1200&auto=format&fit=crop",
+    },
+  ],
+  Beverages: [
+    {
+      name: "Masala Chai",
+      description: "Spiced Indian tea",
+      basePrice: 49,
+      isVegetarian: true,
+      isVegan: true,
+      image: "https://images.unsplash.com/photo-1511920170033-f8396924c348?q=80&w=1200&auto=format&fit=crop",
+    },
+    {
+      name: "Cold Coffee",
+      description: "Iced coffee with cream",
+      basePrice: 129,
+      image: "https://images.unsplash.com/photo-1517705008128-361805f42e86?q=80&w=1200&auto=format&fit=crop",
+      variants: [
+        { name: "Classic", price: 129 },
+        { name: "Mocha", price: 149 },
+      ],
+    },
+    {
+      name: "Fresh Orange Juice",
+      description: "Freshly squeezed oranges",
+      basePrice: 99,
+      isVegetarian: true,
+      isVegan: true,
+      image: "https://images.unsplash.com/photo-1556679343-c7306c2b3ae4?q=80&w=1200&auto=format&fit=crop",
+    },
+    {
+      name: "Craft Beer",
+      description: "Local brewery selection",
+      basePrice: 199,
+      image: "https://images.unsplash.com/photo-1504270997636-07ddfbd48945?q=80&w=1200&auto=format&fit=crop",
+    },
+  ],
+  "Chef's Specials": [
+    {
+      name: "Lamb Rogan Josh",
+      description: "Kashmiri style slow cooked lamb curry",
+      basePrice: 399,
+      image: "https://images.unsplash.com/photo-1625944524526-2fcd9b4f2ffc?q=80&w=1200&auto=format&fit=crop",
+      isSpecialItem: true,
+    },
+    {
+      name: "Truffle Pasta",
+      description: "Creamy pasta infused with black truffle",
+      basePrice: 459,
+      isVegetarian: true,
+      image: "https://images.unsplash.com/photo-1523986371872-9d3ba2e2f642?q=80&w=1200&auto=format&fit=crop",
+      isSpecialItem: true,
+    },
+  ],
+}

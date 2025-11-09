@@ -7,6 +7,7 @@ export default function BannerManager() {
   const [currentBanner, setCurrentBanner] = useState(null);
   const [bannerFile, setBannerFile] = useState(null);
   const [bannerTitle, setBannerTitle] = useState("");
+  const [bannerLink, setBannerLink] = useState("");
   const [bannerActive, setBannerActive] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState(null);
@@ -16,6 +17,7 @@ export default function BannerManager() {
       try {
         const banner = await apiService.getBanner(bannerPlacement);
         setCurrentBanner(banner);
+        setBannerLink(banner?.link || "");
       } catch (_) {
         setCurrentBanner(null);
       }
@@ -35,6 +37,7 @@ export default function BannerManager() {
         placement: bannerPlacement,
         isActive: bannerActive,
         title: bannerTitle,
+        link: bannerLink,
       });
       setMessage({ type: "success", text: "Banner uploaded successfully." });
       const banner = await apiService.getBanner(bannerPlacement);
@@ -94,6 +97,18 @@ export default function BannerManager() {
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
               placeholder="e.g., Festive Offer"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Link (optional)</label>
+            <input
+              type="url"
+              value={bannerLink}
+              onChange={(e) => setBannerLink(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              placeholder="https://example.com/promo"
+            />
+            <p className="text-xs text-gray-500 mt-1">When set, clicking the banner in the menu will open this URL.</p>
           </div>
 
           <div className="flex items-center gap-2">

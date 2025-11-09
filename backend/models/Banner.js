@@ -5,6 +5,7 @@ const BannerSchema = new mongoose.Schema(
     title: { type: String },
     url: { type: String, required: true },
     type: { type: String, enum: ['image', 'video'], required: true },
+    link: { type: String },
     placement: {
       type: String,
       enum: ['all', 'menu', 'cart', 'checkout'],

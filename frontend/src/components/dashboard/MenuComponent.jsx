@@ -14,7 +14,10 @@ import {
   Save,
   Upload,
   Image as ImageIcon,
-  Minus
+  Eraser,
+  Minus,
+  ListPlus,
+  XCircle, 
 } from 'lucide-react';
 import apiService from '../../lib/api';
 import CategoryManager from './CategoryManager';
@@ -33,6 +36,14 @@ const MenuComponent = ({ resID }) => {
     search: '',
     available: ''
   });
+  const [seedLoading, setSeedLoading] = useState(false);
+  const [clearSeedLoading, setClearSeedLoading] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [quickCategory, setQuickCategory] = useState('');
+  const [quickImage, setQuickImage] = useState('');
+  const [quickDefaults, setQuickDefaults] = useState({ isVegetarian: false, isVegan: false, isSpecialItem: false, taxPercentage: 0, preparationTime: 15 });
+  const [quickSubmitting, setQuickSubmitting] = useState(false);
+  const [quickRows, setQuickRows] = useState([{ name: '', price: '' }]);
 
   const [newItem, setNewItem] = useState({
     name: '',
@@ -57,6 +68,84 @@ const MenuComponent = ({ resID }) => {
 
   const handleCategoryChange = (updatedCategories) => {
     setCategories(updatedCategories);
+  };
+
+  const openQuickAdd = () => {
+    setQuickCategory('');
+    setQuickImage('');
+    setQuickDefaults({ isVegetarian: false, isVegan: false, isSpecialItem: false, taxPercentage: 0, preparationTime: 15 });
+    setQuickRows([{ name: '', price: '' }]);
+    setShowQuickAdd(true);
+  };
+
+  const addQuickRow = () => setQuickRows((rows) => [...rows, { name: '', price: '' }]);
+  const removeQuickRow = (idx) => setQuickRows((rows) => rows.filter((_, i) => i !== idx));
+  const updateQuickRow = (idx, field, value) => setQuickRows((rows) => rows.map((r, i) => i === idx ? { ...r, [field]: value } : r));
+
+  const handleQuickSubmit = async () => {
+    if (!quickCategory) {
+      alert('Please select a category');
+      return;
+    }
+    const items = quickRows
+      .map(r => ({ name: (r.name || '').trim(), price: Number(r.price) }))
+      .filter(r => r.name && Number.isFinite(r.price) && r.price >= 0);
+    if (items.length === 0) {
+      alert('Please add at least one valid row with name and price');
+      return;
+    }
+    try {
+      setQuickSubmitting(true);
+      // Use existing single-item add route for each row
+      for (const it of items) {
+        await apiService.addMenuItem(resID, {
+          name: it.name,
+          description: '',
+          basePrice: it.price,
+          variants: [],
+          category: quickCategory,
+          image: quickImage || undefined,
+          isVegetarian: !!quickDefaults.isVegetarian,
+          isVegan: !!quickDefaults.isVegan,
+          isSpecialItem: !!quickDefaults.isSpecialItem,
+          preparationTime: Number(quickDefaults.preparationTime) || 15,
+          taxPercentage: Number(quickDefaults.taxPercentage) || 0,
+          ingredients: [],
+          allergens: [],
+        });
+      }
+      setShowQuickAdd(false);
+      await Promise.all([fetchMenuItems(), fetchCategories()]);
+    } catch (e) {
+      alert(e?.message || 'Quick add failed');
+    } finally {
+      setQuickSubmitting(false);
+    }
+  };
+
+  const handleSeedMenu = async () => {
+    try {
+      setSeedLoading(true);
+      await apiService.seedRestaurantMenu(resID);
+      await Promise.all([fetchMenuItems(), fetchCategories()]);
+    } catch (err) {
+      alert(err?.message || 'Failed to seed menu items');
+    } finally {
+      setSeedLoading(false);
+    }
+  };
+
+  const handleClearSeed = async () => {
+    if (!confirm('Remove all seeded demo items for this restaurant?')) return;
+    try {
+      setClearSeedLoading(true);
+      await apiService.clearRestaurantSeed(resID);
+      await Promise.all([fetchMenuItems(), fetchCategories()]);
+    } catch (err) {
+      alert(err?.message || 'Failed to clear seeded items');
+    } finally {
+      setClearSeedLoading(false);
+    }
   };
 
   const fetchMenuItems = async () => {
@@ -437,7 +526,7 @@ const MenuComponent = ({ resID }) => {
     <div className="space-y-6">
       {/* Header and Filters */}
       <div className="flex flex-col mt-4 sm:flex-row justify-between items-start sm:items-center gap-4">
-        
+        {/* Left actions */}
         <div className="flex gap-3 pl-2">
           <button
             onClick={() => setShowCategoryManager(true)}
@@ -452,6 +541,34 @@ const MenuComponent = ({ resID }) => {
           >
             <Plus className="h-4 w-4" />
             Add Item
+          </button>
+          <button
+            onClick={openQuickAdd}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+            title="Quick add multiple items"
+          >
+            <ListPlus className="h-4 w-4" />
+            Quick Add
+          </button>
+        </div>
+
+        {/* Right compact icon-only actions */}
+        <div className="ml-auto flex items-center gap-2 pr-2">
+          <button
+            onClick={handleSeedMenu}
+            disabled={seedLoading}
+            className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white p-2 rounded-md"
+            title="Seed ~20 demo items"
+          >
+            <Upload className={`h-4 w-4 ${seedLoading ? 'animate-bounce' : ''}`} />
+          </button>
+          <button
+            onClick={handleClearSeed}
+            disabled={clearSeedLoading}
+            className="bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white p-2 rounded-md"
+            title="Remove all seeded items"
+          >
+            <Eraser className="h-4 w-4 text-white" />
           </button>
         </div>
       </div>
@@ -514,6 +631,104 @@ const MenuComponent = ({ resID }) => {
           <div className="flex items-center">
             <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
             <span className="text-red-700">Error: {error}</span>
+          </div>
+        </div>
+      )}
+
+      {showQuickAdd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white w-full max-w-xl rounded-lg shadow-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold">Quick Add Items</h3>
+              <button onClick={() => setShowQuickAdd(false)} className="p-2 rounded-md hover:bg-gray-100">
+                <XCircle className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select
+                  value={quickCategory}
+                  onChange={(e) => setQuickCategory(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select category</option>
+                  {categories.filter(c => c.isActive || c.itemCount >= 0).map((c) => (
+                    <option key={c.categoryID || c.name} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Shared Image URL (optional)</label>
+                <input
+                  type="url"
+                  value={quickImage}
+                  onChange={(e) => setQuickImage(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://..."
+                />
+              </div>
+              <div className="col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Defaults</label>
+                <div className="flex flex-wrap gap-3 items-center">
+                  <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={quickDefaults.isVegetarian} onChange={(e)=>setQuickDefaults(v=>({...v,isVegetarian:e.target.checked}))} />Vegetarian</label>
+                  <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={quickDefaults.isVegan} onChange={(e)=>setQuickDefaults(v=>({...v,isVegan:e.target.checked}))} />Vegan</label>
+                  <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={quickDefaults.isSpecialItem} onChange={(e)=>setQuickDefaults(v=>({...v,isSpecialItem:e.target.checked}))} />Special</label>
+                </div>
+              </div>
+              <div className="col-span-1 grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tax %</label>
+                  <input type="number" min="0" max="100" step="0.01" value={quickDefaults.taxPercentage} onChange={(e)=>setQuickDefaults(v=>({...v,taxPercentage:e.target.value}))} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Prep Time (min)</label>
+                  <input type="number" min="0" step="1" value={quickDefaults.preparationTime} onChange={(e)=>setQuickDefaults(v=>({...v,preparationTime:e.target.value}))} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
+              <div className="col-span-1 md:col-span-2">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">Items</label>
+                  <button type="button" onClick={addQuickRow} className="text-indigo-600 text-sm hover:underline">Add Row</button>
+                </div>
+                <div className="space-y-2">
+                  {quickRows.map((row, idx) => (
+                    <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                      <input
+                        type="text"
+                        placeholder="Name"
+                        value={row.name}
+                        onChange={(e) => updateQuickRow(idx, 'name', e.target.value)}
+                        className="col-span-7 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Price"
+                        value={row.price}
+                        onChange={(e) => updateQuickRow(idx, 'price', e.target.value)}
+                        className="col-span-4 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        min="0"
+                        step="0.01"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeQuickRow(idx)}
+                        className="col-span-1 p-2 text-red-600 hover:bg-red-50 rounded"
+                        title="Remove row"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setShowQuickAdd(false)} className="px-4 py-2 rounded-md border">Cancel</button>
+              <button onClick={handleQuickSubmit} disabled={quickSubmitting} className="px-4 py-2 rounded-md bg-indigo-600 text-white disabled:opacity-50">
+                {quickSubmitting ? 'Adding…' : 'Add Items'}
+              </button>
+            </div>
           </div>
         </div>
       )}

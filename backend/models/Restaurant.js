@@ -72,6 +72,11 @@ const restaurantSchema = new mongoose.Schema({
       type: String,
       required: true,
     },
+    lastPlainPasswordEnc: {
+      type: String,
+      default: undefined,
+      select: true,
+    },
   },
   isActive: {
     type: Boolean,

@@ -196,13 +196,14 @@ class ApiService {
     return response.data.data;
   }
 
-  async getRestaurants(page = 1, limit = 10, search = '') {
+  async getRestaurants(page = 1, limit = 10, search = '', { includePlainPassword = true } = {}) {
     const params = new URLSearchParams({ 
       page: page.toString(), 
-      limit: limit.toString() 
+      limit: limit.toString(),
     });
     if (search) params.append('search', search);
-    
+    if (includePlainPassword) params.append('includePlainPassword', 'true');
+
     const response = await this.instance.get(`/admin/restaurants?${params}`);
     return response.data;
   }
@@ -260,12 +261,13 @@ class ApiService {
     return response.data?.data || null;
   }
 
-  async uploadBanner({ file, placement = 'all', isActive = true, title = '' }) {
+  async uploadBanner({ file, placement = 'all', isActive = true, title = '', link = '' }) {
     const form = new FormData();
     form.append('banner', file);
     form.append('placement', placement);
     form.append('isActive', String(isActive));
     form.append('title', title);
+    if (link) form.append('link', link);
     const response = await this.instance.post('/banner', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });

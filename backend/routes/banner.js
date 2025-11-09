@@ -45,7 +45,7 @@ router.post('/', authenticateSuperAdmin, async (req, res) => {
 
     const { type } = await runUpload();
 
-    const { placement = 'all', isActive = 'true', title = '' } = req.body;
+    const { placement = 'all', isActive = 'true', title = '', link = '' } = req.body;
 
     const payload = {
       title,
@@ -53,6 +53,7 @@ router.post('/', authenticateSuperAdmin, async (req, res) => {
       type,
       placement,
       isActive: String(isActive) !== 'false',
+      link: link || undefined,
       metadata: {
         publicId: req.file?.filename,
         format: req.file?.mimetype,

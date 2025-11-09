@@ -179,6 +179,20 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       //console.warn('[QR] Font registration failed, using serif:', fontErr.message);
     }
 
+    const widthInches = options.widthInches ?? 4;
+    const heightInches = options.heightInches ?? 6;
+    const dpi = options.dpi ?? 300;
+    const targetCanvasWidth = Math.round(widthInches * dpi);
+    const targetCanvasHeight = Math.round(heightInches * dpi);
+
+    const REF_W = 682;
+    const REF_H = 1224;
+    const scale = targetCanvasHeight / REF_H;
+
+    const scaledPanelW = Math.round(520 * scale);
+    const scaledInnerMargin = Math.round(26 * scale);
+    const estimatedQrSize = Math.max(256, scaledPanelW - 2 * scaledInnerMargin);
+
     // Step 1: Generate base QR code
     let qrDataUrl;
     let qrBuffer;
@@ -187,7 +201,7 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       //console.log('[QR] Attempting QR generation with AwesomeQR');
       const qrOptions = {
         text: data,
-        size: 480,
+        size: Math.max(1024, Math.round(estimatedQrSize * 1.5)),
         margin: 20, // Increased margin for safety
         correctLevel: AwesomeQR.CorrectLevel.H,
         whiteMargin: true,
@@ -270,8 +284,8 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
     try {
       //console.log('[QR] Starting canvas composition');
       
-      const canvasWidth = 682;
-      const canvasHeight = 1224;
+      const canvasWidth = targetCanvasWidth;
+      const canvasHeight = targetCanvasHeight;
       const canvas = createCanvas(canvasWidth, canvasHeight);
       const ctx = canvas.getContext('2d');
       
@@ -300,12 +314,12 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       
       drawWrappedCentered(ctx, title, {
         centerX: canvasWidth / 2,
-        centerY: 146,
-        maxWidth: canvasWidth - 160,
+        centerY: Math.round(146 * scale),
+        maxWidth: canvasWidth - Math.round(160 * scale),
         fontFamily,
         weight: '900',
-        initialSize: 56,
-        minSize: 20,
+        initialSize: Math.max(12, Math.round(56 * scale)),
+        minSize: Math.max(10, Math.round(20 * scale)),
         maxLines: 2,
         transform: (s) => s.toUpperCase(),
         fillStyle: gold,
@@ -318,10 +332,10 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       //console.log('[QR] Title drawn');
 
       // Rounded cream panel for QR
-      const panelW = 520;
-      const panelH = 520;
-      const panelX = (canvasWidth - panelW) / 2;
-      const panelY = 228; // gentle extra spacing below title
+      const panelW = Math.round(520 * scale);
+      const panelH = Math.round(520 * scale);
+      const panelX = Math.round((canvasWidth - panelW) / 2);
+      const panelY = Math.round(228 * scale); // gentle extra spacing below title
       
       const roundRect = (x, y, w, h, r) => {
         const rr = Math.min(r, w / 2, h / 2);
@@ -338,10 +352,10 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
         ctx.closePath();
       };
       
-      roundRect(panelX, panelY, panelW, panelH, 18);
+      roundRect(panelX, panelY, panelW, panelH, Math.round(18 * scale));
       ctx.fillStyle = cream;
       ctx.fill();
-      ctx.lineWidth = 6;
+      ctx.lineWidth = Math.max(1, Math.round(6 * scale));
       ctx.strokeStyle = '#E7D7BD';
       ctx.stroke();
       //console.log('[QR] Panel drawn');
@@ -364,7 +378,7 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
         return qrDataUrl;
       }
       
-      const innerMargin = 26;
+      const innerMargin = Math.round(26 * scale);
       const qrSize = panelW - innerMargin * 2;
       const qrX = panelX + innerMargin;
       const qrY = panelY + innerMargin;
@@ -428,22 +442,22 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       const midCaption = (options && (options.qrLabel || options.qrName || options.qrType)) || 'Digital Menu Scan To Order';
 
       // Compute position and auto-size to fit without overlapping QR or icons
-      const instructionsTop = panelY + panelH + 66; // gentle spacing between QR and icons
-      const bandTop = panelY + panelH + 16;  // margin below QR panel
-      const bandBottom = instructionsTop - 16; // margin above icons row
+      const instructionsTop = panelY + panelH + Math.round(66 * scale); // gentle spacing between QR and icons
+      const bandTop = panelY + panelH + Math.round(16 * scale);  // margin below QR panel
+      const bandBottom = instructionsTop - Math.round(16 * scale); // margin above icons row
       const bandHeight = Math.max(1, bandBottom - bandTop);
-      let midSize = 42; // start bigger
-      const maxMidWidth = canvasWidth - 140; // slightly wider allowance
+      let midSize = Math.max(18, Math.round(42 * scale)); // start bigger
+      const maxMidWidth = canvasWidth - Math.round(140 * scale); // slightly wider allowance
       ctx.font = `700 ${midSize}px ${fontFamily}`;
-      while ((ctx.measureText(midCaption).width > maxMidWidth || midSize > bandHeight) && midSize > 18) {
+      while ((ctx.measureText(midCaption).width > maxMidWidth || midSize > bandHeight) && midSize > Math.max(12, Math.round(18 * scale))) {
         midSize -= 1;
         ctx.font = `700 ${midSize}px ${fontFamily}`;
       }
       const midY = bandTop + bandHeight / 2; // centered in the band
       ctx.fillText(midCaption, canvasWidth / 2, midY);
-      const circleD = 120;
+      const circleD = Math.round(120 * scale);
       const circleR = circleD / 2;
-      const stepsGap = 40;
+      const stepsGap = Math.round(40 * scale);
       const totalStepsWidth = circleD * 4 + stepsGap * 3;
       const startX = (canvasWidth - totalStepsWidth) / 2 + circleR;
       const circleY = instructionsTop + circleR;
@@ -457,26 +471,26 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
 
       const drawLens = (cx, cy) => {
         ctx.save();
-        ctx.lineWidth = 10;
+        ctx.lineWidth = Math.max(2, Math.round(10 * scale));
         ctx.strokeStyle = '#4285F4';
         ctx.beginPath();
-        ctx.arc(cx, cy, 26, -Math.PI / 4, Math.PI / 4);
+        ctx.arc(cx, cy, Math.round(26 * scale), -Math.PI / 4, Math.PI / 4);
         ctx.stroke();
         ctx.strokeStyle = '#EA4335';
         ctx.beginPath();
-        ctx.arc(cx, cy, 26, Math.PI / 4, (3 * Math.PI) / 4);
+        ctx.arc(cx, cy, Math.round(26 * scale), Math.PI / 4, (3 * Math.PI) / 4);
         ctx.stroke();
         ctx.strokeStyle = '#34A853';
         ctx.beginPath();
-        ctx.arc(cx, cy, 26, (3 * Math.PI) / 4, (5 * Math.PI) / 4);
+        ctx.arc(cx, cy, Math.round(26 * scale), (3 * Math.PI) / 4, (5 * Math.PI) / 4);
         ctx.stroke();
         ctx.strokeStyle = '#FBBC05';
         ctx.beginPath();
-        ctx.arc(cx, cy, 26, (5 * Math.PI) / 4, (7 * Math.PI) / 4);
+        ctx.arc(cx, cy, Math.round(26 * scale), (5 * Math.PI) / 4, (7 * Math.PI) / 4);
         ctx.stroke();
         ctx.fillStyle = '#4285F4';
         ctx.beginPath();
-        ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+        ctx.arc(cx, cy, Math.round(6 * scale), 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       };
@@ -484,8 +498,8 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       const drawCamera = (cx, cy) => {
         ctx.save();
         ctx.strokeStyle = '#1F2D3D';
-        ctx.lineWidth = 6;
-        const w = 64, h = 40, r = 8;
+        ctx.lineWidth = Math.max(1, Math.round(6 * scale));
+        const w = Math.round(64 * scale), h = Math.round(40 * scale), r = Math.round(8 * scale);
         const x = cx - w / 2, y = cy - h / 2;
         ctx.beginPath();
         ctx.moveTo(x + r, y);
@@ -499,11 +513,11 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
         ctx.quadraticCurveTo(x, y, x + r, y);
         ctx.stroke();
         ctx.beginPath();
-        ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+        ctx.arc(cx, cy, Math.round(12 * scale), 0, Math.PI * 2);
         ctx.stroke();
         ctx.strokeStyle = '#1F7AFC';
         ctx.beginPath();
-        ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+        ctx.arc(cx, cy, Math.round(6 * scale), 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
       };
@@ -511,8 +525,8 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       const drawPhoneQR = (cx, cy) => {
         ctx.save();
         ctx.strokeStyle = '#1F2D3D';
-        ctx.lineWidth = 5;
-        const w = 48, h = 74, r = 8;
+        ctx.lineWidth = Math.max(1, Math.round(5 * scale));
+        const w = Math.round(48 * scale), h = Math.round(74 * scale), r = Math.round(8 * scale);
         const x = cx - w / 2, y = cy - h / 2;
         ctx.beginPath();
         ctx.moveTo(x + r, y);
@@ -526,19 +540,19 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
         ctx.quadraticCurveTo(x, y, x + r, y);
         ctx.stroke();
         ctx.fillStyle = '#1F7AFC';
-        ctx.fillRect(x + 12, y + 18, 8, 8);
-        ctx.fillRect(x + 26, y + 18, 8, 8);
-        ctx.fillRect(x + 12, y + 32, 8, 8);
+        ctx.fillRect(x + Math.round(12 * scale), y + Math.round(18 * scale), Math.round(8 * scale), Math.round(8 * scale));
+        ctx.fillRect(x + Math.round(26 * scale), y + Math.round(18 * scale), Math.round(8 * scale), Math.round(8 * scale));
+        ctx.fillRect(x + Math.round(12 * scale), y + Math.round(32 * scale), Math.round(8 * scale), Math.round(8 * scale));
         ctx.fillStyle = '#1F2D3D';
-        ctx.fillRect(x + 26, y + 32, 8, 8);
+        ctx.fillRect(x + Math.round(26 * scale), y + Math.round(32 * scale), Math.round(8 * scale), Math.round(8 * scale));
         ctx.restore();
       };
 
       const drawTap = (cx, cy) => {
         ctx.save();
         ctx.strokeStyle = '#1F2D3D';
-        ctx.lineWidth = 5;
-        const w = 46, h = 70, r = 8;
+        ctx.lineWidth = Math.max(1, Math.round(5 * scale));
+        const w = Math.round(46 * scale), h = Math.round(70 * scale), r = Math.round(8 * scale);
         const x = cx - w / 2, y = cy - h / 2;
         ctx.beginPath();
         ctx.moveTo(x + r, y);
@@ -552,15 +566,15 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
         ctx.quadraticCurveTo(x, y, x + r, y);
         ctx.stroke();
         ctx.fillStyle = '#1F7AFC';
-        ctx.fillRect(x + w - 24, y + 10, 16, 12);
+        ctx.fillRect(x + w - Math.round(24 * scale), y + Math.round(10 * scale), Math.round(16 * scale), Math.round(12 * scale));
         ctx.strokeStyle = '#1F2D3D';
-        ctx.lineWidth = 4;
+        ctx.lineWidth = Math.max(1, Math.round(4 * scale));
         ctx.beginPath();
-        ctx.moveTo(cx - 6, cy + 8);
-        ctx.lineTo(cx - 6, cy + 28);
+        ctx.moveTo(cx - Math.round(6 * scale), cy + Math.round(8 * scale));
+        ctx.lineTo(cx - Math.round(6 * scale), cy + Math.round(28 * scale));
         ctx.stroke();
         ctx.beginPath();
-        ctx.arc(cx - 6, cy + 8, 6, 0, Math.PI * 2);
+        ctx.arc(cx - Math.round(6 * scale), cy + Math.round(8 * scale), Math.round(6 * scale), 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
       };
@@ -607,8 +621,8 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
       ctx.fillStyle = '#4A5568';
-      ctx.font = `700 16px ${fontFamily}`;
-      const labelY = instructionsTop + circleD + 36;
+      ctx.font = `700 ${Math.max(10, Math.round(16 * scale))}px ${fontFamily}`;
+      const labelY = instructionsTop + circleD + Math.round(36 * scale);
       ctx.fillText('Open Google Search', centers[0], labelY);
       ctx.fillStyle = '#4A5568';
       ctx.fillText('Turn on camera', centers[1], labelY);
@@ -619,55 +633,55 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       ctx.save();
       ctx.fillStyle = '#E1584B';
       ctx.textBaseline = 'middle';
-      ctx.font = `800 20px ${fontFamily}`;
+      ctx.font = `800 ${Math.max(10, Math.round(20 * scale))}px ${fontFamily}`;
       ctx.fillText('OR', (centers[0] + centers[1]) / 2, circleY);
       ctx.restore();
 
       const instructionsHeight = circleD + 56;
 
       // Red pill CTA
-      const pillW = 520;
-      const pillH = 96;
-      const pillX = (canvasWidth - pillW) / 2;
-      const pillY = instructionsTop + instructionsHeight + 28; // gentle extra spacing below icons
+      const pillW = Math.round(520 * scale);
+      const pillH = Math.round(96 * scale);
+      const pillX = Math.round((canvasWidth - pillW) / 2);
+      const pillY = instructionsTop + instructionsHeight + Math.round(28 * scale); // gentle extra spacing below icons
       
-      roundRect(pillX, pillY, pillW, pillH, 24);
+      roundRect(pillX, pillY, pillW, pillH, Math.round(24 * scale));
       // Apply 135° gradient background (top-left to bottom-right)
       const pillGradient = ctx.createLinearGradient(pillX, pillY, pillX + pillW, pillY + pillH);
       pillGradient.addColorStop(0, '#800020');
       pillGradient.addColorStop(1, '#000000');
       ctx.fillStyle = pillGradient;
       ctx.shadowColor = 'rgba(0,0,0,0.25)';
-      ctx.shadowBlur = 6;
+      ctx.shadowBlur = Math.round(6 * scale);
       ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 3;
+      ctx.shadowOffsetY = Math.round(3 * scale);
       ctx.fill();
       ctx.shadowColor = 'transparent';
       ctx.shadowBlur = 0;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
       // Gold border stroke for CTA pill
-      roundRect(pillX, pillY, pillW, pillH, 24);
-      ctx.lineWidth = 3;
+      roundRect(pillX, pillY, pillW, pillH, Math.round(24 * scale));
+      ctx.lineWidth = Math.max(1, Math.round(3 * scale));
       ctx.strokeStyle = 'rgb(212, 175, 55)';
       ctx.stroke();
       
       // CTA text styling (white)
       ctx.fillStyle = '#FFFFFF';
-      let scanSize = 32;
+      let scanSize = Math.max(14, Math.round(32 * scale));
       ctx.font = `700 ${scanSize}px ${fontFamily}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       
       const lines = ['Digital Menu', 'Scan To Order'];
-      const maxScanWidth = pillW - 80;
+      const maxScanWidth = pillW - Math.round(80 * scale);
       
       while (Math.max(...lines.map(l => ctx.measureText(l).width)) > maxScanWidth && scanSize > 20) {
         scanSize -= 2;
         ctx.font = `700 ${scanSize}px ${fontFamily}`;
       }
       
-      const lh = scanSize + 2;
+      const lh = scanSize + Math.max(1, Math.round(2 * scale));
       const cx = canvasWidth / 2;
       const centerY = pillY + pillH / 2;
       
@@ -679,30 +693,30 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       // Gold footer branding (aligned sizes)
       ctx.fillStyle = gold;
       ctx.shadowColor = 'rgba(0,0,0,0.3)';
-      ctx.shadowBlur = 4;
+      ctx.shadowBlur = Math.round(4 * scale);
       ctx.shadowOffsetX = 1;
-      ctx.shadowOffsetY = 2;
+      ctx.shadowOffsetY = Math.round(2 * scale);
 
       // Compute a common font size so both lines share the same size
-      let footerSize = 40;
-      const maxFooterWidth = canvasWidth - 120;
+      let footerSize = Math.max(16, Math.round(40 * scale));
+      const maxFooterWidth = canvasWidth - Math.round(120 * scale);
       ctx.font = `900 ${footerSize}px ${fontFamily}`;
       while (
         Math.max(
           ctx.measureText('POWERED BY').width,
           ctx.measureText('QRUZINE').width
-        ) > maxFooterWidth && footerSize > 20
+        ) > maxFooterWidth && footerSize > Math.max(12, Math.round(20 * scale))
       ) {
         footerSize -= 2;
         ctx.font = `900 ${footerSize}px ${fontFamily}`;
       }
       // Reduce slightly more for a gentler look
-      footerSize = Math.max(18, footerSize - 4);
+      footerSize = Math.max(Math.max(12, Math.round(18 * scale)), footerSize - Math.max(1, Math.round(4 * scale)));
       ctx.font = `900 ${footerSize}px ${fontFamily}`;
 
       ctx.textAlign = 'center';
-      ctx.fillText('POWERED BY', canvasWidth / 2, canvasHeight - 56);
-      ctx.fillText('QRUZINE', canvasWidth / 2, canvasHeight - 12);
+      ctx.fillText('POWERED BY', canvasWidth / 2, canvasHeight - Math.round(56 * scale));
+      ctx.fillText('QRUZINE', canvasWidth / 2, canvasHeight - Math.round(12 * scale));
       //console.log('[QR] Footer branding drawn');
 
       // Convert to data URL

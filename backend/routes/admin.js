@@ -9,6 +9,7 @@ const { authenticateSuperAdmin } = require("../middleware/auth")
 const { generateResID, generatePassword, hashPassword } = require("../utils/helpers")
 const { sendRestaurantCredentials } = require("../utils/emailService")
 const { restaurantValidation } = require("../utils/validation")
+const { encryptPlain, decryptPlain } = require("../utils/crypto")
 const createCsvWriter = require("csv-writer").createObjectCsvWriter
 
 const router = express.Router()
@@ -18,7 +19,7 @@ const path = require('path')
 // Get all restaurants
 router.get("/restaurants", authenticateSuperAdmin, async (req, res) => {
   try {
-    const { page = 1, limit = 10, search = "", businessType = "" } = req.query
+    const { page = 1, limit = 10, search = "", businessType = "", includePlainPassword = "false" } = req.query
 
     // Build search query
     const query = {}
@@ -34,7 +35,7 @@ router.get("/restaurants", authenticateSuperAdmin, async (req, res) => {
     }
 
     const restaurants = await Restaurant.find(query)
-      .select("-credentials.password") // Don't send password in response
+      .select("-credentials.password")
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit)
@@ -42,6 +43,8 @@ router.get("/restaurants", authenticateSuperAdmin, async (req, res) => {
     const total = await Restaurant.countDocuments(query)
 
     // Get statistics for each restaurant
+    const showPlain = String(includePlainPassword).toLowerCase() === "true"
+
     const restaurantsWithStats = await Promise.all(
       restaurants.map(async (restaurant) => {
         const totalOrders = await Order.countDocuments({ resID: restaurant.resID })
@@ -52,8 +55,18 @@ router.get("/restaurants", authenticateSuperAdmin, async (req, res) => {
         const totalMenuItems = await MenuItem.countDocuments({ resID: restaurant.resID })
         const totalQRCodes = await QRCode.countDocuments({ resID: restaurant.resID })
 
+        const base = restaurant.toObject()
+        // Optionally include decrypted plaintext password for super admin view only
+        if (showPlain && base.credentials) {
+          const plain = decryptPlain(base.credentials.lastPlainPasswordEnc)
+          base.credentials = {
+            ...base.credentials,
+            password: plain || undefined,
+          }
+        }
+
         return {
-          ...restaurant.toObject(),
+          ...base,
           stats: {
             totalOrders,
             todayOrders,
@@ -160,6 +173,7 @@ router.post("/restaurants", authenticateSuperAdmin, restaurantValidation, async 
     const adminId = `admin_${resID.toLowerCase()}`
     const password = generatePassword(10)
     const hashedPassword = await hashPassword(password)
+    const lastPlainPasswordEnc = await encryptPlain(password)
 
     // Create restaurant with updated location structure
     const restaurant = new Restaurant({
@@ -178,6 +192,7 @@ router.post("/restaurants", authenticateSuperAdmin, restaurantValidation, async 
       credentials: {
         adminId,
         password: hashedPassword,
+        lastPlainPasswordEnc: encryptPlain(password),
       },
     })
 
@@ -514,6 +529,7 @@ router.post("/restaurants/:resID/reset-credentials", authenticateSuperAdmin, asy
     const hashedPassword = await hashPassword(newPassword)
 
     restaurant.credentials.password = hashedPassword
+    restaurant.credentials.lastPlainPasswordEnc = encryptPlain(newPassword)
     await restaurant.save()
 
     // Send new credentials email if email is provided (non-blocking)

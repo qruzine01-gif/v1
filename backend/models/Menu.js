@@ -92,6 +92,12 @@ const menuItemSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  // Internal flag to identify seeded/demo items
+  isSeeded: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
   preparationTime: {
     type: Number, // in minutes
     default: 15,

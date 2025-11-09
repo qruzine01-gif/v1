@@ -103,7 +103,7 @@ const RestaurantTable = ({
                 </div>
                 <div className={`text-xs mt-1 ${restaurant.isActive ? 'text-green-600' : 'text-red-600'}`}>Status: {restaurant.isActive ? 'Active' : 'Inactive'}</div>
                 <div className="text-xs text-gray-700 mt-1">Admin ID: {restaurant.credentials?.adminId}</div>
-                <div className="text-xs text-gray-700">Password: ••••••••</div>
+                <div className="text-xs text-gray-700">Password: {restaurant.credentials?.password || '—'}</div>
               </div>
             </div>
             <div className="flex flex-wrap gap-2 mt-3">
@@ -199,7 +199,7 @@ const RestaurantTable = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">ID: {restaurant.credentials?.adminId}</div>
-                  <div className="text-sm text-gray-900">Password: ••••••••</div>
+                  <div className="text-sm text-gray-900">Password: {restaurant.credentials?.password || '—'}</div>
                   <div className={`text-sm ${restaurant.isActive ? 'text-green-600' : 'text-red-600'}`}>Status: {restaurant.isActive ? 'Active' : 'Inactive'}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
