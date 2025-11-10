@@ -12,6 +12,7 @@ import {
   Filter,
   X,
   Save,
+  Upload,
   Image as ImageIcon,
   Minus,
   ListPlus,
