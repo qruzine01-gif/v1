@@ -240,6 +240,17 @@ class ApiService {
     return response.data;
   }
 
+  // Demo menu helpers (admin-triggered)
+  async seedRestaurantMenu(restaurantId) {
+    const response = await this.instance.post(`/admin/restaurants/${restaurantId}/seed-menu`);
+    return response.data;
+  }
+
+  async clearRestaurantSeed(restaurantId) {
+    const response = await this.instance.delete(`/admin/restaurants/${restaurantId}/seed-menu`);
+    return response.data;
+  }
+
   async createCoupon(couponData) {
     const response = await this.instance.post('/admin/coupons', couponData);
     return response.data;

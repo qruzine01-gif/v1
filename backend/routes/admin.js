@@ -5,6 +5,9 @@ const Order = require("../models/Order")
 const User = require("../models/User")
 const MenuItem = require("../models/Menu")
 const QRCode = require("../models/QRCode")
+const Category = require("../models/Category")
+const seedItems = require("../data/seedItems")
+const { generateCategoryID, generateMenuID } = require("../utils/helpers")
 const { authenticateSuperAdmin } = require("../middleware/auth")
 const { generateResID, generatePassword, hashPassword } = require("../utils/helpers")
 const { sendRestaurantCredentials } = require("../utils/emailService")
@@ -859,12 +862,14 @@ router.post("/send-credentials", authenticateSuperAdmin, async (req, res) => {
 router.get("/dashboard/stats", authenticateSuperAdmin, async (req, res) => {
   try {
     const totalRestaurants = await Restaurant.countDocuments()
+
     const activeRestaurants = await Restaurant.countDocuments({ isActive: true })
     const totalOrders = await Order.countDocuments()
     const todayOrders = await Order.countDocuments({
       createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
     })
 
+    // ... rest of the code remains the same ...
     // Revenue statistics
     const totalRevenue = await Order.aggregate([
       { $match: { status: "Delivered" } },
@@ -929,6 +934,90 @@ router.get("/dashboard/stats", authenticateSuperAdmin, async (req, res) => {
       success: false,
       message: "Internal server error",
     })
+  }
+})
+
+// Seed ~20+ demo menu items for a restaurant (admin-triggered)
+router.post("/restaurants/:resID/seed-menu", authenticateSuperAdmin, async (req, res) => {
+  try {
+    const { resID } = req.params
+
+    // Ensure restaurant exists
+    const restaurant = await Restaurant.findOne({ resID })
+    if (!restaurant) {
+      return res.status(404).json({ success: false, message: "Restaurant not found" })
+    }
+
+    const dataset = seedItems
+    const categoriesNeeded = Object.keys(dataset)
+
+    // Ensure categories exist
+    const existing = await Category.find({ resID, name: { $in: categoriesNeeded } })
+    const existingByName = new Map(existing.map((c) => [c.name, c]))
+    const toCreate = categoriesNeeded.filter((name) => !existingByName.has(name))
+
+    if (toCreate.length) {
+      const docs = toCreate.map((name) => ({ categoryID: generateCategoryID(), resID, name, isActive: true }))
+      const createdCats = await Category.insertMany(docs)
+      for (const cat of createdCats) existingByName.set(cat.name, cat)
+    }
+
+    // Create items if not already present by name+category
+    let createdCount = 0
+    for (const [category, items] of Object.entries(dataset)) {
+      for (const data of items) {
+        const exists = await MenuItem.findOne({ resID, name: data.name, category })
+        if (exists) continue
+        const catDoc = existingByName.get(category)
+        const doc = new MenuItem({
+          menuID: generateMenuID(),
+          resID,
+          category,
+          categoryID: catDoc?.categoryID,
+          name: data.name,
+          description: data.description,
+          basePrice: data.basePrice ?? 0,
+          variants: data.variants || [],
+          image: data.image || null,
+          ingredients: data.ingredients || [],
+          allergens: data.allergens || [],
+          isVegetarian: !!data.isVegetarian,
+          isVegan: !!data.isVegan,
+          isSpecialItem: !!data.isSpecialItem,
+          isAvailable: true,
+          preparationTime: data.preparationTime || 15,
+          rating: data.rating || 0,
+          taxPercentage: data.taxPercentage ?? 0,
+          isSeeded: true,
+        })
+        await doc.save()
+        createdCount++
+      }
+    }
+
+    res.json({ success: true, message: "Seeded demo menu items", data: { created: createdCount } })
+  } catch (error) {
+    console.error("[Admin] Seed menu error:", error)
+    res.status(500).json({ success: false, message: "Internal server error" })
+  }
+})
+
+// Clear all seeded demo items for a restaurant (admin-triggered)
+router.delete("/restaurants/:resID/seed-menu", authenticateSuperAdmin, async (req, res) => {
+  try {
+    const { resID } = req.params
+
+    // Ensure restaurant exists
+    const restaurant = await Restaurant.findOne({ resID })
+    if (!restaurant) {
+      return res.status(404).json({ success: false, message: "Restaurant not found" })
+    }
+
+    const result = await MenuItem.deleteMany({ resID, isSeeded: true })
+    res.json({ success: true, message: "Cleared seeded items", data: { deleted: result.deletedCount || 0 } })
+  } catch (error) {
+    console.error("[Admin] Clear seed error:", error)
+    res.status(500).json({ success: false, message: "Internal server error" })
   }
 })
 

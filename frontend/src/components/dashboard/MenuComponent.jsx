@@ -12,9 +12,7 @@ import {
   Filter,
   X,
   Save,
-  Upload,
   Image as ImageIcon,
-  Eraser,
   Minus,
   ListPlus,
   XCircle, 
@@ -36,8 +34,7 @@ const MenuComponent = ({ resID }) => {
     search: '',
     available: ''
   });
-  const [seedLoading, setSeedLoading] = useState(false);
-  const [clearSeedLoading, setClearSeedLoading] = useState(false);
+  
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [quickCategory, setQuickCategory] = useState('');
   const [quickImage, setQuickImage] = useState('');
@@ -123,30 +120,7 @@ const MenuComponent = ({ resID }) => {
     }
   };
 
-  const handleSeedMenu = async () => {
-    try {
-      setSeedLoading(true);
-      await apiService.seedRestaurantMenu(resID);
-      await Promise.all([fetchMenuItems(), fetchCategories()]);
-    } catch (err) {
-      alert(err?.message || 'Failed to seed menu items');
-    } finally {
-      setSeedLoading(false);
-    }
-  };
-
-  const handleClearSeed = async () => {
-    if (!confirm('Remove all seeded demo items for this restaurant?')) return;
-    try {
-      setClearSeedLoading(true);
-      await apiService.clearRestaurantSeed(resID);
-      await Promise.all([fetchMenuItems(), fetchCategories()]);
-    } catch (err) {
-      alert(err?.message || 'Failed to clear seeded items');
-    } finally {
-      setClearSeedLoading(false);
-    }
-  };
+  
 
   const fetchMenuItems = async () => {
     try {
@@ -552,25 +526,7 @@ const MenuComponent = ({ resID }) => {
           </button>
         </div>
 
-        {/* Right compact icon-only actions */}
-        <div className="ml-auto flex items-center gap-2 pr-2">
-          <button
-            onClick={handleSeedMenu}
-            disabled={seedLoading}
-            className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white p-2 rounded-md"
-            title="Seed ~20 demo items"
-          >
-            <Upload className={`h-4 w-4 ${seedLoading ? 'animate-bounce' : ''}`} />
-          </button>
-          <button
-            onClick={handleClearSeed}
-            disabled={clearSeedLoading}
-            className="bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white p-2 rounded-md"
-            title="Remove all seeded items"
-          >
-            <Eraser className="h-4 w-4 text-white" />
-          </button>
-        </div>
+        
       </div>
 
       {/* Filters */}

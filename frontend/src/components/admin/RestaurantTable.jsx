@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, Trash2, Power, PowerOff, Share2 } from 'lucide-react';
+import { Download, Trash2, Power, PowerOff, Share2, Upload, Eraser } from 'lucide-react';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
 import ShareCredentialsModal from './ShareCredentialsModal';
@@ -22,6 +22,33 @@ const RestaurantTable = ({
   const [shareOpen, setShareOpen] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [shareLoading, setShareLoading] = useState(false);
+  const [seedLoading, setSeedLoading] = useState({});
+  const [clearLoading, setClearLoading] = useState({});
+
+  const handleSeedMenu = async (resID) => {
+    try {
+      setSeedLoading((m) => ({ ...m, [resID]: true }));
+      await apiService.seedRestaurantMenu(resID);
+      alert('Seeded demo menu items');
+    } catch (e) {
+      alert(e?.response?.data?.message || e?.message || 'Failed to seed menu items');
+    } finally {
+      setSeedLoading((m) => ({ ...m, [resID]: false }));
+    }
+  };
+
+  const handleClearSeed = async (resID) => {
+    if (!confirm('Remove all seeded demo items for this restaurant?')) return;
+    try {
+      setClearLoading((m) => ({ ...m, [resID]: true }));
+      await apiService.clearRestaurantSeed(resID);
+      alert('Cleared seeded items');
+    } catch (e) {
+      alert(e?.response?.data?.message || e?.message || 'Failed to clear seeded items');
+    } finally {
+      setClearLoading((m) => ({ ...m, [resID]: false }));
+    }
+  };
 
   const openShare = async (restaurant) => {
     try {
@@ -115,6 +142,24 @@ const RestaurantTable = ({
               >
                 {actionLoading[`export-${restaurant.resID}-csv`] ? <LoadingSpinner size="small" /> : <Download className="h-3 w-3" />}
                 CSV
+              </button>
+              <button
+                onClick={() => handleSeedMenu(restaurant.resID)}
+                disabled={!!seedLoading[restaurant.resID]}
+                className="px-2 py-1 text-xs border border-gray-300 rounded text-emerald-700 hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1"
+                title="Seed demo menu"
+              >
+                {seedLoading[restaurant.resID] ? <LoadingSpinner size="small" /> : <Upload className="h-3 w-3" />}
+                Seed
+              </button>
+              <button
+                onClick={() => handleClearSeed(restaurant.resID)}
+                disabled={!!clearLoading[restaurant.resID]}
+                className="px-2 py-1 text-xs border border-gray-300 rounded text-red-700 hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1"
+                title="Clear seeded items"
+              >
+                {clearLoading[restaurant.resID] ? <LoadingSpinner size="small" /> : <Eraser className="h-3 w-3" />}
+                Clear
               </button>
               <button
                 onClick={() => onExport(restaurant.resID, 'xlsx')}
@@ -213,6 +258,24 @@ const RestaurantTable = ({
                     >
                       {actionLoading[`export-${restaurant.resID}-xlsx`] ? <LoadingSpinner size="small" /> : <Download className="h-4 w-4" />}
                       Excel
+                    </button>
+                    <button
+                      onClick={() => handleSeedMenu(restaurant.resID)}
+                      disabled={!!seedLoading[restaurant.resID]}
+                      className="text-emerald-600 hover:text-emerald-900 flex items-center gap-1 disabled:opacity-50"
+                      title="Seed demo menu"
+                    >
+                      {seedLoading[restaurant.resID] ? <LoadingSpinner size="small" /> : <Upload className="h-4 w-4" />}
+                      Seed
+                    </button>
+                    <button
+                      onClick={() => handleClearSeed(restaurant.resID)}
+                      disabled={!!clearLoading[restaurant.resID]}
+                      className="text-red-600 hover:text-red-900 flex items-center gap-1 disabled:opacity-50"
+                      title="Clear seeded items"
+                    >
+                      {clearLoading[restaurant.resID] ? <LoadingSpinner size="small" /> : <Eraser className="h-4 w-4" />}
+                      Clear
                     </button>
                     <button
                       onClick={() => openShare(restaurant)}
