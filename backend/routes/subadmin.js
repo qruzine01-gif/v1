@@ -14,6 +14,8 @@ const router = express.Router()
 router.get("/:resID/dashboard", authenticateSubAdmin, verifyRestaurantAccess, async (req, res) => {
   try {
     const { resID } = req.params
+    // Fetch basic restaurant info for display purposes
+    const restaurantDoc = await Restaurant.findOne({ resID }).select("name resID")
 
     // Get today's date range
     const today = new Date()
@@ -84,6 +86,10 @@ router.get("/:resID/dashboard", authenticateSubAdmin, verifyRestaurantAccess, as
     res.json({
       success: true,
       data: {
+        restaurant: {
+          resID,
+          name: restaurantDoc?.name || resID,
+        },
         orders: {
           total: totalOrders,
           today: todayOrders,

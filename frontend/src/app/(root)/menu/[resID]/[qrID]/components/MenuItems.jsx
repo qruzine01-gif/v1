@@ -2,9 +2,10 @@
 
 import React, { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Plus, Minus, X, ShoppingCart, ChevronDown } from "lucide-react"
+import { Plus, Minus, X, ShoppingCart, ChevronDown, ChevronLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 import BannerMedia from "../../../../../../components/BannerMedia"
+import Header from "./Header"
 
 // Safely compute the lowest available variant price
 function getLowestAvailablePrice(item) {
@@ -171,7 +172,8 @@ function VariantControls({ parent, variant, quantity, onChange }) {
 
 // Replace only the MobileMenuItem(...) function in your MenuItems file with the code below.
 
-function MobileMenuItem({ item, quantity, onQuantityChange, cart }) {
+function MobileMenuItem({ item, quantity, onQuantityChange, cart, onOpenShowcase }) {
+
   const [isExpanded, setIsExpanded] = useState(false)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [burstKey, setBurstKey] = useState(0)
@@ -180,18 +182,13 @@ function MobileMenuItem({ item, quantity, onQuantityChange, cart }) {
 
   return (
     // visible until lg (mobile + tablet). Desktop will use DesktopMenuItem for lg+
-    <div className="py-0.5 block lg:hidden cursor-pointer overflow-visible">
+    <div className="py-1 block lg:hidden cursor-pointer overflow-visible">
       <div 
-        onClick={() => {
-          if (Array.isArray(item.variants) && item.variants.length > 0) {
-            setIsSheetOpen(true)
-          } else {
-            setIsExpanded(!isExpanded)
-          }
-        }} 
-        className="relative flex items-center gap-2 bg-white rounded-lg p-2 border-2 shadow-sm hover:shadow-md transition-shadow overflow-visible"
+        onClick={() => { onOpenShowcase?.(item) }} 
+        className="relative flex items-center gap-2 bg-white rounded-lg p-3 border-2 shadow-sm hover:shadow-md transition-shadow overflow-visible"
         style={{ borderColor: 'rgb(212, 175, 55)' }}
       >
+
         {/* Diagonal ribbon only on mobile+tablet (this container is hidden on lg) */}
         {item.isSpecialItem && (
           // moved ribbon container inside the clickable card, but allowed overflow-visible on the card so it is not clipped
@@ -250,7 +247,7 @@ function MobileMenuItem({ item, quantity, onQuantityChange, cart }) {
         ) : (
           <motion.button
             whileTap={{ scale: 0.96 }}
-            onClick={(e) => { e.stopPropagation(); setIsSheetOpen(true) }}
+            onClick={(e) => { e.stopPropagation(); onOpenShowcase?.(item) }}
             className="px-3 py-2 rounded-full text-[#FFFAFA] text-xs shadow hover:shadow-md active:scale-95 transition"
             style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}
           >
@@ -316,14 +313,16 @@ function MobileMenuItem({ item, quantity, onQuantityChange, cart }) {
 
 // Replace the existing DesktopMenuItem(...) function in your MenuItems file with the code below.
 
-function DesktopMenuItem({ item, quantity, onQuantityChange, cart }) {
+function DesktopMenuItem({ item, quantity, onQuantityChange, cart, onOpenShowcase }) {
   const [burstKey, setBurstKey] = useState(0)
   return (
     // Desktop layout now appears at lg and above
     <div
-      className="py-0.5 hidden lg:flex flex-col rounded-xl overflow-visible shadow-md hover:shadow-xl transition-all duration-300 border-2 bg-white cursor-pointer relative"
+      className="py-1 hidden lg:flex flex-col rounded-xl overflow-visible shadow-md hover:shadow-xl transition-all duration-300 border-2 bg-white cursor-pointer relative"
       style={{ borderColor: 'rgb(212, 175, 55)' }}
+      onClick={() => { onOpenShowcase?.(item) }}
     >
+
       {/* Diagonal ribbon for desktop (allowed to overflow because parent is overflow-visible) */}
       {item.isSpecialItem && (
         <div className="absolute -top-3 -left-5 md:-left-8 z-30 pointer-events-none">
@@ -344,8 +343,9 @@ function DesktopMenuItem({ item, quantity, onQuantityChange, cart }) {
         decoding="async"
         className="w-full h-48 object-cover"
       />
-      <div className="p-4 flex flex-col flex-1">
+      <div className="p-5 flex flex-col flex-1">
         <h3 className="font-semibold text-lg mb-2 text-gray-900">{item.name}</h3>
+
         <p className="text-gray-700 text-sm mb-4 flex-1">{item.description}</p>
         <div className="flex items-center justify-between">
           {(!item.variants?.length) ? (
@@ -442,8 +442,11 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
     }
   }
 
+  const [showcaseItem, setShowcaseItem] = useState(null)
+
   return (
     <div className="px-2 py-4 bg-[#FFFAFA] min-h-screen">
+
       {/* Categories */}
       <div className="flex items-center justify-between pb-2 mb-3">
         <div className="flex gap-2 overflow-x-auto pr-2 [-ms-overflow-style:none] [scrollbar-width:none]" style={{ scrollbarWidth: 'none' }}>
@@ -513,7 +516,7 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
       </div>
 
       {/* Mobile + Tablet Items (visible until lg) */}
-      <div className="space-y-1">
+      <div className="space-y-2">
         {filteredItems.map((item, index) => (
           <div key={item.id || item.menuID || index}>
             <MobileMenuItem
@@ -521,6 +524,7 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
               quantity={cart[item.id] || cart[item.menuID] || 0}
               onQuantityChange={handleQuantityChange}
               cart={cart}
+              onOpenShowcase={(it) => setShowcaseItem(it)}
             />
 
             {activeCategory === "All" && index === Math.floor(filteredItems.length / 2) && (
@@ -546,7 +550,9 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
                   quantity={cart[item.id] || cart[item.menuID] || 0}
                   onQuantityChange={handleQuantityChange}
                   cart={cart}
+                  onOpenShowcase={(it) => setShowcaseItem(it)}
                 />
+
               </React.Fragment>
             )
           }
@@ -558,10 +564,127 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
               quantity={cart[item.id] || cart[item.menuID] || 0}
               onQuantityChange={handleQuantityChange}
               cart={cart}
+              onOpenShowcase={(it) => setShowcaseItem(it)}
             />
+
           )
         })}
       </div>
+
+      {/* Product Showcase Full-Screen */}
+      <AnimatePresence>
+        {showcaseItem && (
+          <motion.div
+            className="fixed inset-0 z-50 bg-white"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            {/* Use shared Header for consistent look */}
+            <div className="sticky top-0 z-20">
+              <Header
+                cartItemsCount={cartCount}
+                onCartClick={() => { if (typeof onGoToCart === 'function') { onGoToCart() } else { router.push('/cart') } }}
+                onBack={() => setShowcaseItem(null)}
+              />
+            </div>
+
+            {/* Content with animated product transitions */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={showcaseItem.menuID || showcaseItem.id}
+                initial={{ x: 40, opacity: 0.6 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -40, opacity: 0.6 }}
+                transition={{ type: 'spring', stiffness: 450, damping: 38, mass: 0.9 }}
+                className="overflow-y-auto max-h-[calc(100vh-56px)]"
+              >
+                {showcaseItem.image && (
+                  <img src={showcaseItem.image} alt={showcaseItem.name} className="w-full h-64 object-cover" />
+                )}
+                <div className="p-4 sm:p-6">
+                  <h2 className="text-2xl font-semibold text-gray-900">{showcaseItem.name}</h2>
+                  {showcaseItem.category && (
+                    <p className="text-sm text-gray-500 mt-0.5">{showcaseItem.category}</p>
+                  )}
+                  {showcaseItem.description && (
+                    <p className="text-sm text-gray-700 mt-3">{showcaseItem.description}</p>
+                  )}
+
+                  {/* Price or variants */}
+                  {Array.isArray(showcaseItem.variants) && showcaseItem.variants.length > 0 ? (
+                    <div className="mt-5 space-y-3">
+                      {showcaseItem.variants.filter(v => v && v.isAvailable !== false).map(v => (
+                        <VariantControls
+                          key={`${showcaseItem.menuID}-${v.name}`}
+                          parent={showcaseItem}
+                          variant={v}
+                          quantity={cart[`${showcaseItem.menuID}:${v.name}`] || 0}
+                          onChange={handleQuantityChange}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-5 flex items-center justify-between">
+                      <span className="text-2xl font-bold text-gray-900">₹{Number(showcaseItem.price || 0).toFixed(2)}</span>
+                      {(cart[showcaseItem.id] || cart[showcaseItem.menuID] || 0) > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => handleQuantityChange(showcaseItem, Math.max(0, (cart[showcaseItem.id] || cart[showcaseItem.menuID] || 0) - 1))} className="p-2 rounded text-white" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}>
+                            <Minus className="w-5 h-5" />
+                          </button>
+                          <span className="w-8 text-center font-semibold">{cart[showcaseItem.id] || cart[showcaseItem.menuID] || 0}</span>
+                          <button onClick={() => handleQuantityChange(showcaseItem, (cart[showcaseItem.id] || cart[showcaseItem.menuID] || 0) + 1)} className="p-2 rounded text-white" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}>
+                            <Plus className="w-5 h-5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={() => handleQuantityChange(showcaseItem, 1)} className="px-5 py-2.5 rounded text-white font-medium" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}>
+                          Add
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Related products */}
+                <div className="px-4 sm:px-6 pb-6">
+                  {(() => {
+                    const related = (items || [])
+                      .filter(i => i && i.menuID !== (showcaseItem.menuID || showcaseItem.id) && (
+                        !showcaseItem.category || i.category === showcaseItem.category
+                      ))
+                      .slice(0, 8)
+                    if (!related.length) return null
+                    return (
+                      <div className="mt-4">
+                        <h3 className="text-base font-semibold text-gray-900 mb-3">More from {showcaseItem.category || 'menu'}</h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {related.map((it, idx) => (
+                            <button
+                              key={it.id || it.menuID || idx}
+                              onClick={() => setShowcaseItem(it)}
+                              className="text-left bg-white rounded-lg border overflow-hidden hover:shadow transition-shadow"
+                            >
+                              {it.image && (
+                                <img src={it.image} alt={it.name} className="w-full h-24 object-cover" />
+                              )}
+                              <div className="p-2">
+                                <p className="text-sm font-medium text-gray-900 line-clamp-1">{it.name}</p>
+                                <p className="text-xs text-gray-600 line-clamp-1">{it.category}</p>
+                                <p className="text-sm font-semibold text-gray-900 mt-1">₹{Number(it.price || getLowestAvailablePrice(it) || 0).toFixed(2)}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Mobile sticky Go to Cart button (matches header cart style) */}
       <AnimatePresence>

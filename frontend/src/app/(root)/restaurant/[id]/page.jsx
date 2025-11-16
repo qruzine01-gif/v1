@@ -27,6 +27,7 @@ const RestaurantDashboard = ({ params }) => {
   const [error, setError] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState(null);
   
   const isMobile = useMediaQuery({ maxWidth: 768 });
   
@@ -56,45 +57,46 @@ const RestaurantDashboard = ({ params }) => {
         return;
       }
 
-      fetchRestaurantInfo();
-      fetchPendingOrders();
+      loadDashboardHeader();
     }
   }, [resID]);
 
-  const fetchRestaurantInfo = async () => {
+  const loadDashboardHeader = async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      // Try to fetch actual restaurant info from backend
       const response = await apiService.getDashboardStats(resID);
+      const stats = response.data;
+      setDashboardStats(stats);
+      setPendingOrdersCount(stats?.orders?.active || 0);
+      // Derive a human-friendly restaurant name. Some backends may put the id in `name`.
+      const candidateName =
+        stats?.restaurant?.restaurantName ||
+        stats?.restaurant?.displayName ||
+        stats?.restaurant?.title ||
+        stats?.restaurant?.profile?.name ||
+        stats?.restaurant?.name;
+
+      const finalName = candidateName && candidateName !== resID
+        ? candidateName
+        : `Restaurant ${resID}`;
+
       setRestaurantInfo({
-        name: response.data.restaurant?.name || `Restaurant ${resID}`,
-        resID: resID
+        name: finalName,
+        resID,
       });
     } catch (err) {
-      console.error('Error fetching restaurant info:', err);
+      console.error('Error loading dashboard header:', err);
       if (err.message === 'Authentication required') {
-        // Already handled by API service - user will be redirected
         return;
       }
       setError('Failed to load restaurant information');
-      // Fallback for demo
       setRestaurantInfo({
         name: `Restaurant ${resID}`,
-        resID: resID
+        resID,
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchPendingOrders = async () => {
-    try {
-      const response = await apiService.getDashboardStats(resID);
-      setPendingOrdersCount(response.data.orders.active || 0);
-    } catch (err) {
-      console.error('Error fetching pending orders:', err);
     }
   };
 
@@ -103,7 +105,7 @@ const RestaurantDashboard = ({ params }) => {
     
     switch (activeTab) {
       case 'overview':
-        return <OverviewComponent resID={resID} />;
+        return <OverviewComponent resID={resID} initialStats={dashboardStats} />;
       case 'orders':
         return <OrdersComponent resID={resID} />;
       case 'menu':
@@ -111,7 +113,7 @@ const RestaurantDashboard = ({ params }) => {
       case 'qr':
         return <QRCodesComponent resID={resID} />;
       default:
-        return <OverviewComponent resID={resID} />;
+        return <OverviewComponent resID={resID} initialStats={dashboardStats} />;
     }
   };
 

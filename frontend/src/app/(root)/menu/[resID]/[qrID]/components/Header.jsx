@@ -1,16 +1,17 @@
 "use client"
 
 import Image from "next/image"
-import { ShoppingCart } from "lucide-react"
+import { ShoppingCart, ChevronLeft } from "lucide-react"
 
 // Header with optional logo image on the left + restaurant name, and only cart icon on the right.
 // Mobile-friendly and professional with gold accents.
-export default function Header({ cartItemsCount = 0, onCartClick, restaurantName = "Restaurant", logoUrl }) {
+export default function Header({ cartItemsCount = 0, onCartClick, restaurantName = "Restaurant", logoUrl, onBack }) {
   const initial = (restaurantName || 'R').trim().charAt(0).toUpperCase()
   const effectiveLogoUrl = logoUrl || "/images/logo.png"
   return (
     <header
       className="sticky top-0 z-40 border-b-2"
+
       style={{
         backgroundColor: 'rgba(15, 18, 15, 0.85)',
         backdropFilter: 'blur(10px)',
@@ -19,8 +20,18 @@ export default function Header({ cartItemsCount = 0, onCartClick, restaurantName
     >
       <div className="w-full mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
-          {/* Left: Logo + Name */}
+          {/* Left: Back (optional) + Logo + Name */}
           <div className="flex items-center gap-3 min-w-0">
+            {typeof onBack === 'function' && (
+              <button
+                onClick={onBack}
+                aria-label="Back"
+                className="p-2 rounded-md hover:bg-black/20"
+                style={{ color: '#FFFAFA' }}
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+            )}
             {effectiveLogoUrl ? (
               <div 
                 className="h-10 w-10 relative ring-1 rounded-md"

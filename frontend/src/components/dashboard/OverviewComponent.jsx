@@ -12,14 +12,20 @@ import {
 } from 'lucide-react';
 import apiService from '../../lib/api';
 
-const OverviewComponent = ({ resID }) => {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+const OverviewComponent = ({ resID, initialStats = null }) => {
+  const [stats, setStats] = useState(initialStats);
+  const [loading, setLoading] = useState(!initialStats);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // If parent provided stats, use them and avoid immediate refetch
+    if (initialStats && initialStats.restaurant?.resID === resID) {
+      setStats(initialStats);
+      setLoading(false);
+      return;
+    }
     fetchDashboardStats();
-  }, [resID]);
+  }, [resID, initialStats]);
 
   const fetchDashboardStats = async () => {
     try {

@@ -61,8 +61,11 @@ const MenuComponent = ({ resID }) => {
 
   useEffect(() => {
     fetchMenuItems();
-    fetchCategories();
   }, [resID, filters]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [resID]);
 
   const handleCategoryChange = (updatedCategories) => {
     setCategories(updatedCategories);
@@ -594,7 +597,7 @@ const MenuComponent = ({ resID }) => {
 
       {showQuickAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white w-full max-w-xl rounded-lg shadow-lg p-4">
+          <div className="bg-white w-full max-w-xl max-h-[90vh] rounded-lg shadow-lg p-4 overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold">Quick Add Items</h3>
               <button onClick={() => setShowQuickAdd(false)} className="p-2 rounded-md hover:bg-gray-100">
