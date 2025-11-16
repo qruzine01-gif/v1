@@ -1,0 +1,14 @@
+cd backend
+nano .ebignore
+```
+
+Add this content:
+```
+node_modules/
+.git/
+.env
+*.log
+.DS_Store
+coverage/
+.vscode/
+.idea/

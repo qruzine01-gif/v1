@@ -181,7 +181,7 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT,"0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
   console.log("[Startup] Allowed CORS Origins:", allowedOrigins);
   if (process.env.ALLOW_VERCEL_PATTERN === "true") {
