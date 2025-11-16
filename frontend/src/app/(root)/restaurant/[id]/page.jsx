@@ -77,9 +77,32 @@ const RestaurantDashboard = ({ params }) => {
         stats?.restaurant?.profile?.name ||
         stats?.restaurant?.name;
 
-      const finalName = candidateName && candidateName !== resID
+      let finalName = candidateName && candidateName !== resID
         ? candidateName
-        : `Restaurant ${resID}`;
+        : null;
+
+      // If name is missing or equals the ID (observed in production), try a fallback fetch
+      if (!finalName) {
+        try {
+          const detailsResp = await apiService.getRestaurantDetails(resID);
+          const d = detailsResp?.data || detailsResp; // support either {data} or plain object
+          const detailsName =
+            d?.restaurantName ||
+            d?.displayName ||
+            d?.title ||
+            d?.profile?.name ||
+            d?.name;
+          if (detailsName && detailsName !== resID) {
+            finalName = detailsName;
+          }
+        } catch (e) {
+          // ignore fallback error; we'll use a generic label
+        }
+      }
+
+      if (!finalName) {
+        finalName = `Restaurant ${resID}`;
+      }
 
       setRestaurantInfo({
         name: finalName,
