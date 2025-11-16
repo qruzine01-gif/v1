@@ -71,6 +71,9 @@ const orderSchema = new mongoose.Schema({
     dob: {
       type: Date,
     },
+    anniversary: {
+      type: Date,
+    },
   },
   items: [orderItemSchema],
   totalAmount: {

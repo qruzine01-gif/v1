@@ -160,10 +160,10 @@ function VariantControls({ parent, variant, quantity, onChange }) {
       ) : (
         <button
           onClick={(e) => { e.stopPropagation(); onChange(composed, 1) }}
-          className="px-3 py-2 rounded text-white text-xs"
+          className="px-3 py-2 rounded-full text-white text-xs"
           style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}
         >
-          Add
+          +
         </button>
       )}
     </div>
@@ -408,7 +408,7 @@ function DesktopMenuItem({ item, quantity, onQuantityChange, cart, onOpenShowcas
   )
 }
 
-export default function MenuItems({ activeCategory, onCategoryChange, cart, onQuantityChange, items = [], categories = ["All"], vegOnly = false, onToggleVeg, onGoToCart, dietPreference = 'all', onDietPreferenceChange }) {
+export default function MenuItems({ activeCategory, onCategoryChange, cart, onQuantityChange, items = [], categories = ["All"], vegOnly = false, onToggleVeg, onGoToCart, dietPreference = 'all', onDietPreferenceChange, restaurantName }) {
   const router = useRouter()
   const filteredItems = activeCategory === "All" 
     ? items 
@@ -585,6 +585,7 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
               <Header
                 cartItemsCount={cartCount}
                 onCartClick={() => { if (typeof onGoToCart === 'function') { onGoToCart() } else { router.push('/cart') } }}
+                restaurantName = {restaurantName}
                 onBack={() => setShowcaseItem(null)}
               />
             </div>
@@ -638,8 +639,8 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
                           </button>
                         </div>
                       ) : (
-                        <button onClick={() => handleQuantityChange(showcaseItem, 1)} className="px-5 py-2.5 rounded text-white font-medium" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}>
-                          Add
+                        <button onClick={() => handleQuantityChange(showcaseItem, 1)} className="px-5 py-2.5 rounded-full text-white font-bold" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}>
+                          +
                         </button>
                       )}
                     </div>
@@ -681,6 +682,42 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
                   })()}
                 </div>
               </motion.div>
+            </AnimatePresence>
+            {/* Mobile sticky Go to Cart inside showcase (same style) */}
+            <AnimatePresence>
+              {cartCount > 0 && (
+                <motion.button
+                  key={`go-cart-showcase-${cartCount}`}
+                  initial={{ y: 64, opacity: 0, scale: 0.98 }}
+                  animate={{ y: 0, opacity: 1, scale: 1, boxShadow: "0 12px 30px rgba(0,0,0,0.35)" }}
+                  exit={{ y: 64, opacity: 0, scale: 0.98 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => { if (typeof onGoToCart === 'function') { onGoToCart() } else { router.push('/cart') } }}
+                  className="fixed left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-full text-[#FFFAFA] flex items-center gap-2 backdrop-blur-md"
+                  style={{ bottom: 'calc(16px + env(safe-area-inset-bottom))' }}
+                >
+                  <div
+                    className="absolute inset-0 -z-10 rounded-full border-2"
+                    style={{
+                      backgroundColor: 'rgba(15, 18, 15, 0.85)',
+                      borderColor: 'rgb(212, 175, 55)'
+                    }}
+                  />
+                  <ShoppingCart className="w-5 h-5" />
+                  <span className="text-sm font-semibold">Go to Cart</span>
+                  <motion.span
+                    key={`badge-showcase-${cartCount}`}
+                    initial={{ scale: 0.9, opacity: 0.8 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 600, damping: 24 }}
+                    className="inline-flex h-6 min-w-6 items-center justify-center rounded-full text-black text-xs px-2"
+                    style={{ backgroundColor: 'rgb(212, 175, 55)' }}
+                  >
+                    {cartCount}
+                  </motion.span>
+                </motion.button>
+              )}
             </AnimatePresence>
           </motion.div>
         )}

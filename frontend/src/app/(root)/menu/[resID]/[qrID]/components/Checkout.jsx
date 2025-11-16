@@ -50,8 +50,8 @@ export default function Checkout({
           name: formData.name,
           phone: formData.phone,
           email: computedEmail,
-          age: formData.age || undefined,
           dob: formData.dob || undefined,
+          anniversary: formData.anniversary || undefined,
         },
         items: payloadItems,
         specialRequest: formData.specialInstructions || '',
@@ -69,8 +69,8 @@ export default function Checkout({
           name: payload.customer.name,
           phone: payload.customer.phone,
           email: payload.customer.email,
-          age: formData.age || undefined,
           dob: formData.dob || undefined,
+          anniversary: formData.anniversary || undefined,
           specialInstructions: formData.specialInstructions || '',
         },
         items,
@@ -168,7 +168,9 @@ export default function Checkout({
                         onChange={(e) => setFormData({...formData, phone: e.target.value})}
                         className="w-full px-4 py-3 md:py-3.5 rounded-lg border-2 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2"
                         style={{ borderColor: 'rgb(212, 175, 55)' }}
+                        placeholder="WhatsApp number for e-bill"
                       />
+                      <p className="mt-1 text-[11px] md:text-xs text-gray-600">To get e-bill, add your WhatsApp number.</p>
                     </div>
                   </div>
 
@@ -180,23 +182,21 @@ export default function Checkout({
                     <div className="flex items-center gap-2 mb-2">
                       <Gift className="h-5 w-5" style={{ color: 'rgb(212, 175, 55)' }} />
                       <h4 className="text-xs md:text-sm font-semibold" style={{ color: 'rgb(212, 175, 55)' }}>
-                        Need exciting offer coupons on birthdays? Enter these as well (optional)
+                        Need exciting offer coupons on birthdays? Enter this as well (optional)
                       </h4>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                       <div>
                         <label className="block text-xs md:text-sm font-medium mb-2" style={{ color: 'rgb(212, 175, 55)' }}>
-                          Age (Optional)
+                          <Calendar className="h-4 w-4 inline mr-2" />
+                          Date of Birth (Optional)
                         </label>
                         <input
-                          type="number"
-                          min={1}
-                          max={120}
-                          value={formData.age || ''}
-                          onChange={(e) => setFormData({ ...formData, age: e.target.value ? Number(e.target.value) : '' })}
+                          type="date"
+                          value={formData.dob || ''}
+                          onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
                           className="w-full px-4 py-3 md:py-3.5 rounded-lg border-2 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2"
                           style={{ borderColor: 'rgb(212, 175, 55)' }}
-                          placeholder="Your age"
                         />
                       </div>
                       <div>
@@ -206,8 +206,8 @@ export default function Checkout({
                         </label>
                         <input
                           type="date"
-                          value={formData.dob || ''}
-                          onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+                          value={formData.anniversary || ''}
+                          onChange={(e) => setFormData({ ...formData, anniversary: e.target.value })}
                           className="w-full px-4 py-3 md:py-3.5 rounded-lg border-2 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2"
                           style={{ borderColor: 'rgb(212, 175, 55)' }}
                         />

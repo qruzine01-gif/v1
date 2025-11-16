@@ -13,7 +13,7 @@ export default function Header({ cartItemsCount = 0, onCartClick, restaurantName
       className="sticky top-0 z-40 border-b-2"
 
       style={{
-        backgroundColor: 'rgba(15, 18, 15, 0.85)',
+        backgroundColor: 'rgba(15, 18, 15)',
         backdropFilter: 'blur(10px)',
         borderColor: 'rgb(212, 175, 55)'
       }}

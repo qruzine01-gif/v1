@@ -170,6 +170,7 @@ router.post("/place", orderValidation, async (req, res) => {
           existingUser.location = qrCode.type
           if (customer.age !== undefined) existingUser.age = customer.age
           if (customer.dob) existingUser.dob = customer.dob
+          if (customer.anniversary) existingUser.anniversary = customer.anniversary
           if (!isGuestEmail && !existingUser.email) existingUser.email = customer.email
           await existingUser.save()
         } else {
@@ -182,6 +183,7 @@ router.post("/place", orderValidation, async (req, res) => {
             orderCount: 1,
             age: customer.age,
             dob: customer.dob,
+            anniversary: customer.anniversary,
           })
           await newUser.save()
         }

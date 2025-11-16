@@ -306,42 +306,43 @@ export default function Page() {
                       All
                     </button>
                   </div>
-                </motion.div>
               </motion.div>
-            )}
-          </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-          {/* Main Content */}
-          <main>
-            <MenuItems
-              activeCategory={activeCategory}
-              onCategoryChange={setActiveCategory}
-              items={filteredItems}
-              categories={categories}
-              vegOnly={vegOnly}
-              onToggleVeg={() => setVegOnly(v => !v)}
-              dietPreference={dietPreference}
-              onDietPreferenceChange={handleDietPreferenceChange}
-              cart={cartItems.reduce((acc, item) => ({ ...acc, [item.id]: item.quantity }), {})}
-              onQuantityChange={(sel, qty) => {
-                const id = sel.id
-                const nextQty = Math.max(0, qty || 0)
-                const existing = cartItems.find(i => i.id === id)
-                if (nextQty === 0) {
-                  updateQuantity(id, 0)
-                  return
-                }
-                if (existing) {
-                  updateQuantity(id, nextQty)
-                } else {
-                  // Add new item with exact quantity
-                  setCartItems(prev => [...prev, { ...sel, quantity: nextQty }])
-                }
-              }}
-              onGoToCart={() => setIsCartOpen(true)}
-            />
+        {/* Main Content */}
+        <main>
+          <MenuItems
+            activeCategory={activeCategory}
+            onCategoryChange={setActiveCategory}
+            restaurantName={restaurant?.name || 'Restaurant'}
+            items={filteredItems}
+            categories={categories}
+            vegOnly={vegOnly}
+            onToggleVeg={() => setVegOnly(v => !v)}
+            dietPreference={dietPreference}
+            onDietPreferenceChange={handleDietPreferenceChange}
+            cart={cartItems.reduce((acc, item) => ({ ...acc, [item.id]: item.quantity }), {})}
+            onQuantityChange={(sel, qty) => {
+              const id = sel.id
+              const nextQty = Math.max(0, qty || 0)
+              const existing = cartItems.find(i => i.id === id)
+              if (nextQty === 0) {
+                updateQuantity(id, 0)
+                return
+              }
+              if (existing) {
+                updateQuantity(id, nextQty)
+              } else {
+                // Add new item with exact quantity
+                setCartItems(prev => [...prev, { ...sel, quantity: nextQty }])
+              }
+            }}
+            onGoToCart={() => setIsCartOpen(true)}
+          />
 
-          </main>
+        </main>
 
           {/* Footer */}
            <Footer restaurant={restaurant} /> 
