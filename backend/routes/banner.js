@@ -10,12 +10,17 @@ router.get('/', async (req, res) => {
   try {
     const { placement } = req.query;
 
-    const query = { isActive: true };
+    let banner = null;
+    // Prefer exact placement match over 'all' fallback
     if (placement && placement !== 'all') {
-      query.$or = [{ placement }, { placement: 'all' }];
+      banner = await Banner.findOne({ isActive: true, placement }).sort({ updatedAt: -1 });
+      if (!banner) {
+        banner = await Banner.findOne({ isActive: true, placement: 'all' }).sort({ updatedAt: -1 });
+      }
+    } else {
+      banner = await Banner.findOne({ isActive: true }).sort({ updatedAt: -1 });
     }
 
-    const banner = await Banner.findOne(query).sort({ updatedAt: -1 });
     if (!banner) {
       return res.json({ success: true, data: null });
     }

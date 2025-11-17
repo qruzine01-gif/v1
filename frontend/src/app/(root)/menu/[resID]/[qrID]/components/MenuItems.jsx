@@ -410,9 +410,17 @@ function DesktopMenuItem({ item, quantity, onQuantityChange, cart, onOpenShowcas
 
 export default function MenuItems({ activeCategory, onCategoryChange, cart, onQuantityChange, items = [], categories = ["All"], vegOnly = false, onToggleVeg, onGoToCart, dietPreference = 'all', onDietPreferenceChange, restaurantName }) {
   const router = useRouter()
-  const filteredItems = activeCategory === "All" 
+  const [searchQuery, setSearchQuery] = useState("")
+  const baseItems = activeCategory === "All" 
     ? items 
     : items.filter(item => item.category === activeCategory)
+  const filteredItems = (baseItems || []).filter(it => {
+    if (!searchQuery) return true
+    const q = searchQuery.toLowerCase()
+    const name = String(it?.name || '').toLowerCase()
+    const desc = String(it?.description || '').toLowerCase()
+    return name.includes(q) || desc.includes(q)
+  })
 
   // Toast state for add-to-cart feedback
   const [toastKey, setToastKey] = useState(0)
@@ -515,6 +523,30 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
         </div>
       </div>
 
+      {/* Search */}
+      <div className="mb-3">
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search dishes..."
+            className="w-full px-4 py-2 rounded-full border-2 bg-white text-sm md:text-base focus:outline-none"
+            style={{ borderColor: 'rgb(212, 175, 55)' }}
+            aria-label="Search dishes"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 text-sm rounded-full"
+              style={{ backgroundColor: 'rgba(212, 175, 55, 0.15)', color: 'rgb(55,65,81)' }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Mobile + Tablet Items (visible until lg) */}
       <div className="space-y-2">
         {filteredItems.map((item, index) => (
@@ -601,7 +633,11 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
                 className="overflow-y-auto max-h-[calc(100vh-56px)]"
               >
                 {showcaseItem.image && (
-                  <img src={showcaseItem.image} alt={showcaseItem.name} className="w-full h-64 object-cover" />
+                  <img
+                    src={showcaseItem.image}
+                    alt={showcaseItem.name}
+                    className="w-full max-h-[60vh] object-contain bg-white"
+                  />
                 )}
                 <div className="p-4 sm:p-6">
                   <h2 className="text-2xl font-semibold text-gray-900">{showcaseItem.name}</h2>
