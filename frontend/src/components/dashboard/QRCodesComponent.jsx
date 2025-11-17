@@ -24,6 +24,16 @@ const QRCodesComponent = ({ resID }) => {
   const [qrDetails, setQrDetails] = useState({});
   const [previewQR, setPreviewQR] = useState(null);
 
+  // Confirmation modal state for sensitive actions (delete/toggle)
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    action: null, // 'delete' | 'toggle'
+    qrID: null,
+  });
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [confirmError, setConfirmError] = useState(null);
+
   const [newQR, setNewQR] = useState({
     type: '',
     description: ''
@@ -107,9 +117,19 @@ const QRCodesComponent = ({ resID }) => {
     }
   };
 
-  const toggleQRStatus = async (qrID) => {
+  const requestToggleQRStatus = (qrID) => {
+    setConfirmError(null);
+    setConfirmPassword('');
+    setConfirmModal({ open: true, action: 'toggle', qrID });
+  };
+
+  const performToggleQRStatus = async (qrID, password) => {
     try {
+      // Attach password hint for backend verification (optional on server)
+      const originalGetHeaders = apiService.getHeaders.bind(apiService);
+      apiService.getHeaders = () => ({ ...originalGetHeaders(), 'X-Confirm-Password': password || '' });
       await apiService.toggleQRCodeStatus(resID, qrID);
+
       setQrCodes(prev =>
         prev.map(qr =>
           qr.qrID === qrID ? { ...qr, isActive: !qr.isActive } : qr
@@ -117,19 +137,35 @@ const QRCodesComponent = ({ resID }) => {
       );
     } catch (err) {
       console.error('Error toggling QR status:', err);
-      alert('Failed to update QR status: ' + err.message);
+      throw err;
+    } finally {
+      // restore header function
+      if (apiService && typeof apiService.getHeaders === 'function' && apiService.getHeaders.name === '') {
+        // best-effort restore: rebind to class method
+        apiService.getHeaders = apiService.__proto__.getHeaders.bind(apiService);
+      }
     }
   };
 
-  const deleteQRCode = async (qrID) => {
-    if (!confirm('Are you sure you want to delete this QR code?')) return;
+  const requestDeleteQRCode = (qrID) => {
+    setConfirmError(null);
+    setConfirmPassword('');
+    setConfirmModal({ open: true, action: 'delete', qrID });
+  };
 
+  const performDeleteQRCode = async (qrID, password) => {
     try {
+      const originalGetHeaders = apiService.getHeaders.bind(apiService);
+      apiService.getHeaders = () => ({ ...originalGetHeaders(), 'X-Confirm-Password': password || '' });
       await apiService.deleteQRCode(resID, qrID);
       setQrCodes(prev => prev.filter(qr => qr.qrID !== qrID));
     } catch (err) {
       console.error('Error deleting QR code:', err);
-      alert('Failed to delete QR code: ' + err.message);
+      throw err;
+    } finally {
+      if (apiService && typeof apiService.getHeaders === 'function' && apiService.getHeaders.name === '') {
+        apiService.getHeaders = apiService.__proto__.getHeaders.bind(apiService);
+      }
     }
   };
 
@@ -256,6 +292,80 @@ Menu URL: ${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://qruzine.com'}/menu/
         </div>
       )}
 
+      {/* Confirm Sensitive Action Modal */}
+      {confirmModal.open && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                {confirmModal.action === 'delete' ? 'Delete QR Code' : 'Change QR Availability'}
+              </h3>
+              <button
+                onClick={() => { setConfirmModal({ open: false, action: null, qrID: null }); setConfirmPassword(''); setConfirmError(null); }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-700 mb-3">
+              Please confirm this action by entering your account password.
+            </p>
+
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Enter your password"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {confirmError && (
+              <div className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                <AlertCircle className="h-4 w-4" />
+                {confirmError}
+              </div>
+            )}
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => { setConfirmModal({ open: false, action: null, qrID: null }); setConfirmPassword(''); setConfirmError(null); }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setConfirmError(null);
+                  if (!confirmPassword) {
+                    setConfirmError('Password is required');
+                    return;
+                  }
+                  setConfirmLoading(true);
+                  try {
+                    if (confirmModal.action === 'delete') {
+                      await performDeleteQRCode(confirmModal.qrID, confirmPassword);
+                    } else if (confirmModal.action === 'toggle') {
+                      await performToggleQRStatus(confirmModal.qrID, confirmPassword);
+                    }
+                    setConfirmModal({ open: false, action: null, qrID: null });
+                    setConfirmPassword('');
+                  } catch (e) {
+                    setConfirmError(e?.message || 'Failed to confirm action');
+                  } finally {
+                    setConfirmLoading(false);
+                  }
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-60"
+                disabled={confirmLoading}
+              >
+                {confirmLoading ? 'Processing...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* QR Codes Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {qrCodes.map((qr) => (
@@ -269,7 +379,7 @@ Menu URL: ${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://qruzine.com'}/menu/
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => toggleQRStatus(qr.qrID)}
+                    onClick={() => requestToggleQRStatus(qr.qrID)}
                     className={`p-1 rounded ${(qr.isActive ?? true) ? 'text-green-600' : 'text-gray-400'}`}
                     title={(qr.isActive ?? true) ? 'Active' : 'Inactive'}
                   >
@@ -360,7 +470,7 @@ Menu URL: ${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://qruzine.com'}/menu/
                   <RefreshCw className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => deleteQRCode(qr.qrID)}
+                  onClick={() => requestDeleteQRCode(qr.qrID)}
                   className="px-3 py-2 text-sm text-red-600 border border-red-600 rounded hover:bg-red-50"
                 >
                   <Trash2 className="h-4 w-4" />
