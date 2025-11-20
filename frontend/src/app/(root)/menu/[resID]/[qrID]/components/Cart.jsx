@@ -225,7 +225,7 @@ export default function Cart({
                         <span className="text-gray-900 font-semibold">₹{subtotal.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-700">Tax (10%)</span>
+                        <span className="text-gray-700">Tax</span>
                         <span className="text-gray-900 font-semibold">₹{tax.toFixed(2)}</span>
                       </div>
                       <hr style={{ borderColor: 'rgb(212, 175, 55)' }} />

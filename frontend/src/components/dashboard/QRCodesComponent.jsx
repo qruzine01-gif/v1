@@ -59,6 +59,21 @@ const QRCodesComponent = ({ resID }) => {
     }
   };
 
+  const downloadTransparentPNG = async (qrCode) => {
+    try {
+      const blob = await apiService.downloadQRCodePNG(resID, qrCode.qrID, { transparent: true, size: 1024 });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `qruzine-qr-${qrCode.type.replace(/\s+/g, '-').toLowerCase()}-${qrCode.qrID}-transparent.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading transparent PNG:', err);
+      alert('Failed to download transparent PNG: ' + err.message);
+    }
+  };
+
   const createQRCode = async () => {
     try {
       if (!newQR.type || !newQR.description) {
@@ -233,6 +248,56 @@ Menu URL: ${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://qruzine.com'}/menu/
     } catch (err) {
       console.error('Error downloading QR PDF:', err);
       alert('Failed to download QR as PDF: ' + err.message);
+    }
+  };
+
+  const downloadQRCodePSD = async (qrCode) => {
+    try {
+      if (!qrCode.qrCodeData) {
+        alert('No QR image available to export as PSD');
+        return;
+      }
+
+      const psdLib = await import('ag-psd');
+      const { writePsd } = psdLib;
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = qrCode.qrCodeData;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = () => reject(new Error('Failed to load QR image'));
+      });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width || 512;
+      canvas.height = img.naturalHeight || img.height || 512;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      const psd = {
+        width: canvas.width,
+        height: canvas.height,
+        children: [
+          { name: 'QR Code', canvas, visible: true, opacity: 1 },
+        ],
+      };
+
+      const arrayBuffer = writePsd(psd);
+      const blob = new Blob([arrayBuffer], { type: 'image/vnd.adobe.photoshop' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `qruzine-qr-${qrCode.type.replace(/\s+/g, '-').toLowerCase()}-${qrCode.qrID}.psd`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error exporting QR as PSD:', err);
+      if (/Cannot find module 'ag-psd'/.test(String(err))) {
+        alert("PSD export requires 'ag-psd'. Please install it: npm i ag-psd");
+      } else {
+        alert('Failed to download QR as PSD: ' + err.message);
+      }
     }
   };
 
@@ -454,6 +519,20 @@ Menu URL: ${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://qruzine.com'}/menu/
                   title="Download PNG"
                 >
                   PNG
+                </button>
+                <button
+                  onClick={() => downloadTransparentPNG(qr)}
+                  className="px-3 py-2 text-sm text-emerald-600 border border-emerald-600 rounded hover:bg-emerald-50"
+                  title="Download Transparent PNG"
+                >
+                  PNG (T)
+                </button>
+                <button
+                  onClick={() => downloadQRCodePSD(qr)}
+                  className="px-3 py-2 text-sm text-indigo-600 border border-indigo-600 rounded hover:bg-indigo-50"
+                  title="Download PSD"
+                >
+                  PSD
                 </button>
                 
                 <button

@@ -5,7 +5,7 @@ const Restaurant = require("../models/Restaurant")
 const { authenticateSubAdmin, verifyRestaurantAccess } = require("../middleware/auth")
 const { generateQRID } = require("../utils/helpers")
 const { generateMenuURL } = require("../utils/qrGenerator")
-const { generateProfessionalQR, generateMinimalProfessionalQR } = require("../utils/awesomeQrGenerator")
+const { generateProfessionalQR, generateMinimalProfessionalQR, generateBareQRPNG } = require("../utils/awesomeQrGenerator")
 const { createQrPdf } = require("../utils/qrPdf")
 const { qrCodeValidation } = require("../utils/validation")
 
@@ -33,6 +33,36 @@ router.get("/:resID", authenticateSubAdmin, verifyRestaurantAccess, async (req, 
       success: false,
       message: "Internal server error",
     })
+  }
+})
+
+// Download bare QR as PNG (optionally transparent background)
+router.get("/:resID/:qrID/png", authenticateSubAdmin, verifyRestaurantAccess, async (req, res) => {
+  try {
+    const { resID, qrID } = req.params
+    const { transparent = "false", size } = req.query
+
+    const qrCode = await QRCode.findOne({ qrID, resID })
+    if (!qrCode) {
+      return res.status(404).json({ success: false, message: "QR code not found" })
+    }
+
+    const menuURL = generateMenuURL(resID, qrID)
+    const buf = await generateBareQRPNG(menuURL, {
+      size: Math.max(256, Math.min(4096, parseInt(size, 10) || 1024)),
+      margin: 0,
+      transparent: String(transparent).toLowerCase() === 'true',
+    })
+
+    res.setHeader("Content-Type", "image/png")
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="qruzine-qr-${qrID}${String(transparent).toLowerCase()==='true' ? '-transparent' : ''}.png"`
+    )
+    res.end(buf)
+  } catch (error) {
+    console.error("QR PNG generation error:", error)
+    res.status(500).json({ success: false, message: "Failed to generate QR PNG" })
   }
 })
 

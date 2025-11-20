@@ -35,6 +35,24 @@ const generateSafeBaseQR = async (text) => {
   }
 };
 
+// Generate a bare QR PNG (no branding), optionally with transparent background
+const generateBareQRPNG = async (text, { size = 1024, margin = 0, transparent = false } = {}) => {
+  const options = {
+    text,
+    size: Math.max(256, size),
+    margin: Math.max(0, margin),
+    correctLevel: AwesomeQR.CorrectLevel.H,
+    whiteMargin: !transparent,
+    dotScale: 1.0,
+    colorDark: '#000000',
+    colorLight: transparent ? 'rgba(0,0,0,0)' : '#FFFFFF',
+    autoColor: false,
+    binarize: true,
+  };
+  const buf = await new AwesomeQR(options).draw();
+  return buf;
+};
+
 const bufferToDataUrl = (buf) => {
   let nodeBuf;
   if (Buffer.isBuffer(buf)) nodeBuf = buf;
@@ -819,5 +837,6 @@ module.exports = {
   generateCompactProfessionalQR,
   generateQRWithPlayfairFont,
   registerPlayfairFont,
-  generateMinimalProfessionalQR
+  generateMinimalProfessionalQR,
+  generateBareQRPNG
 };

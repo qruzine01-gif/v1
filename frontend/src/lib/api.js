@@ -296,6 +296,18 @@ class ApiService {
     });
   }
 
+  // Download bare QR as PNG (blob)
+  async downloadQRCodePNG(resID, qrID, { transparent = false, size } = {}) {
+    const qp = new URLSearchParams();
+    if (transparent) qp.set('transparent', 'true');
+    if (size) qp.set('size', String(size));
+    const qs = qp.toString();
+    return this.requestBlob(`/qr/${resID}/${qrID}/png${qs ? `?${qs}` : ''}`, {
+      method: 'GET',
+      accept: 'image/png',
+    });
+  }
+
   // Admin APIs (for super admin features)
   async getRestaurants(page = 1, limit = 10) {
     return this.request(`/admin/restaurants?page=${page}&limit=${limit}`, 'GET');
