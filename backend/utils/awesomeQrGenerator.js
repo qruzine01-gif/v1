@@ -1,4 +1,14 @@
-const { AwesomeQR } = require('awesome-qr');
+// Lazy loader for awesome-qr to avoid pulling native canvas on startup
+let AwesomeQR;
+const ensureAwesome = () => {
+  if (AwesomeQR) return true;
+  try {
+    ({ AwesomeQR } = require('awesome-qr'));
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
 // Lazy canvas loader to avoid hard-failing when native modules are absent or mismatched
 let createCanvas, loadImage, registerFont;
 const ensureCanvas = () => {
@@ -45,20 +55,23 @@ const generateSafeBaseQR = async (text) => {
 // Generate a bare QR PNG (no branding), optionally with transparent background
 const generateBareQRPNG = async (text, { size = 1024, margin = 0, transparent = false } = {}) => {
   try {
-    const options = {
-      text,
-      size: Math.max(256, size),
-      margin: Math.max(0, margin),
-      correctLevel: AwesomeQR.CorrectLevel.H,
-      whiteMargin: !transparent,
-      dotScale: 1.0,
-      colorDark: '#000000',
-      colorLight: transparent ? 'rgba(0,0,0,0)' : '#FFFFFF',
-      autoColor: false,
-      binarize: true,
-    };
-    const buf = await new AwesomeQR(options).draw();
-    return buf;
+    if (ensureAwesome()) {
+      const options = {
+        text,
+        size: Math.max(256, size),
+        margin: Math.max(0, margin),
+        correctLevel: AwesomeQR.CorrectLevel.H,
+        whiteMargin: !transparent,
+        dotScale: 1.0,
+        colorDark: '#000000',
+        colorLight: transparent ? 'rgba(0,0,0,0)' : '#FFFFFF',
+        autoColor: false,
+        binarize: true,
+      };
+      const buf = await new AwesomeQR(options).draw();
+      return buf;
+    }
+    throw new Error('awesome-qr not available');
   } catch (e) {
     // Fallback to qrcode buffer
     return await QRCodeLib.toBuffer(text, {
@@ -238,6 +251,7 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
     
     try {
       //console.log('[QR] Attempting QR generation with AwesomeQR');
+      if (!ensureAwesome()) throw new Error('awesome-qr not available');
       const qrOptions = {
         text: data,
         size: Math.max(1024, Math.round(estimatedQrSize * 1.5)),
