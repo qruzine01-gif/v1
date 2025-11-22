@@ -40,11 +40,59 @@ export default function Page() {
   const [qrInfo, setQrInfo] = useState(null)
   const [menuItems, setMenuItems] = useState([])
   const [categories, setCategories] = useState(["All"]) 
+  const [categoriesMeta, setCategoriesMeta] = useState([])
   const [vegOnly, setVegOnly] = useState(false)
   const [dietPreference, setDietPreference] = useState('all') // 'veg' | 'nonveg' | 'vegan' | 'all'
   const [showPrefPrompt, setShowPrefPrompt] = useState(false)
+  const [uiStage, setUiStage] = useState('categories') // 'categories' | 'items'
+  const [openItemId, setOpenItemId] = useState(null)
 
-  // Fetch public menu
+  // Compute which diet options are available in this restaurant's menu
+  const availableDiets = useMemo(() => {
+    const list = menuItems || []
+    const hasVeg = list.some(i => i.isVegetarian === true)
+    const hasNonVeg = list.some(i => i.isVegetarian !== true)
+    const hasVegan = list.some(i => i.isVegan === true || (Array.isArray(i.tags) && i.tags.includes('vegan')))
+    const opts = []
+    if (hasVeg) opts.push('veg')
+    if (hasNonVeg) opts.push('nonveg')
+    if (hasVegan) opts.push('vegan')
+    return opts
+  }, [menuItems])
+
+  // When a category card is picked from the initial grid
+  const handlePickCategory = (cat) => {
+    setActiveCategory(cat)
+
+    // apply current diet filters when choosing first item
+    const inCat = (menuItems || []).filter(i => i.category === cat)
+    let list = inCat
+    if (dietPreference === 'veg') list = list.filter(i => i.isVegetarian === true)
+    else if (dietPreference === 'nonveg') list = list.filter(i => i.isVegetarian !== true)
+    else if (dietPreference === 'vegan') list = list.filter(i => i.isVegan === true || (Array.isArray(i.tags) && i.tags.includes('vegan')))
+    const first = list[0] || inCat[0] || null
+    setOpenItemId(first ? (first.id || first.menuID) : null)
+    setUiStage('items')
+    try {
+      if (typeof window !== 'undefined' && window.history && window.history.pushState) {
+        window.history.pushState({ stage: 'items', category: cat }, '')
+      }
+    } catch {}
+  }
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && window.history) {
+        const st = window.history.state
+        if (!st) {
+          window.history.replaceState({ stage: 'categories' }, '')
+          // Add a guard entry so hardware back doesn't leave the site immediately
+          window.history.pushState({ stage: 'categories' }, '')
+        }
+      }
+    } catch {}
+  }, [])
+
   useEffect(() => {
     let isMounted = true
     async function fetchMenu() {
@@ -80,7 +128,16 @@ export default function Page() {
         setMenuItems(items)
         const cats = ["All", ...Object.keys(data.menu || {})]
         setCategories(cats)
+        // categoriesMeta provided by backend (name, image, itemCount)
+        if (Array.isArray(data.categoriesMeta)) {
+          setCategoriesMeta(data.categoriesMeta)
+        } else if (Array.isArray(payload?.categoriesMeta)) {
+          setCategoriesMeta(payload.categoriesMeta)
+        } else {
+          setCategoriesMeta([])
+        }
         setActiveCategory("All")
+        setUiStage('categories')
         setError(null)
       } catch (e) {
         console.error('Failed to load menu:', e)
@@ -111,7 +168,6 @@ export default function Page() {
       console.warn('Failed to load cart from storage', e)
     }
   }, [storageKey])
-
 
   // Load saved diet preference and show the prompt on each load (pre-filled)
   useEffect(() => {
@@ -229,6 +285,29 @@ export default function Page() {
     else if (vegOnly) setVegOnly(false)
   }
 
+  useEffect(() => {
+    function onPop(e) {
+      try {
+        const st = e?.state
+        // If pop is for closing showcase (managed in child), ignore here
+        if (st && st.showcase) return
+        if (uiStage === 'items') {
+          setUiStage('categories')
+          setOpenItemId(null)
+        } else {
+          // Stay within the site: immediately push a categories state back
+          if (typeof window !== 'undefined' && window.history) {
+            window.history.pushState({ stage: 'categories' }, '')
+          }
+        }
+      } catch {}
+    }
+    window.addEventListener('popstate', onPop)
+    return () => {
+      window.removeEventListener('popstate', onPop)
+    }
+  }, [uiStage])
+
   return (
     <>
       {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
@@ -277,27 +356,33 @@ export default function Page() {
                   <h3 className="text-center text-lg font-semibold mb-1" style={{ color: '#FFFAFA' }}>Select your preference</h3>
                   <p className="text-center text-xs mb-4" style={{ color: '#FFFAFA', opacity: 0.85 }}>This helps us show you the right dishes.</p>
                   <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={() => { setDietPreference('veg'); localStorage.setItem(prefKey, 'veg'); setShowPrefPrompt(false) }}
-                      className="px-3 py-3 rounded-xl text-sm font-semibold border"
-                      style={{ backgroundColor: 'rgba(30,30,30,0.6)', color: '#FFFAFA', borderColor: 'rgb(212, 175, 55)' }}
-                    >
-                      Veg
-                    </button>
-                    <button
-                      onClick={() => { setDietPreference('nonveg'); localStorage.setItem(prefKey, 'nonveg'); setShowPrefPrompt(false) }}
-                      className="px-3 py-3 rounded-xl text-sm font-semibold border"
-                      style={{ backgroundColor: 'rgba(30,30,30,0.6)', color: '#FFFAFA', borderColor: 'rgb(212, 175, 55)' }}
-                    >
-                      Non-veg
-                    </button>
-                    <button
-                      onClick={() => { setDietPreference('vegan'); localStorage.setItem(prefKey, 'vegan'); setShowPrefPrompt(false) }}
-                      className="px-3 py-3 rounded-xl text-sm font-semibold border"
-                      style={{ backgroundColor: 'rgba(30,30,30,0.6)', color: '#FFFAFA', borderColor: 'rgb(212, 175, 55)' }}
-                    >
-                      Vegan
-                    </button>
+                    {availableDiets.includes('veg') && (
+                      <button
+                        onClick={() => { setDietPreference('veg'); localStorage.setItem(prefKey, 'veg'); setShowPrefPrompt(false) }}
+                        className="px-3 py-3 rounded-xl text-sm font-semibold border"
+                        style={{ backgroundColor: 'rgba(30,30,30,0.6)', color: '#FFFAFA', borderColor: 'rgb(212, 175, 55)' }}
+                      >
+                        Veg
+                      </button>
+                    )}
+                    {availableDiets.includes('nonveg') && (
+                      <button
+                        onClick={() => { setDietPreference('nonveg'); localStorage.setItem(prefKey, 'nonveg'); setShowPrefPrompt(false) }}
+                        className="px-3 py-3 rounded-xl text-sm font-semibold border"
+                        style={{ backgroundColor: 'rgba(30,30,30,0.6)', color: '#FFFAFA', borderColor: 'rgb(212, 175, 55)' }}
+                      >
+                        Non-veg
+                      </button>
+                    )}
+                    {availableDiets.includes('vegan') && (
+                      <button
+                        onClick={() => { setDietPreference('vegan'); localStorage.setItem(prefKey, 'vegan'); setShowPrefPrompt(false) }}
+                        className="px-3 py-3 rounded-xl text-sm font-semibold border"
+                        style={{ backgroundColor: 'rgba(30,30,30,0.6)', color: '#FFFAFA', borderColor: 'rgb(212, 175, 55)' }}
+                      >
+                        Vegan
+                      </button>
+                    )}
                     <button
                       onClick={() => { setDietPreference('all'); localStorage.setItem(prefKey, 'all'); setShowPrefPrompt(false) }}
                       className="px-3 py-3 rounded-xl text-sm font-semibold border"
@@ -306,41 +391,47 @@ export default function Page() {
                       All
                     </button>
                   </div>
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>
 
-        {/* Main Content */}
-        <main>
-          <MenuItems
-            activeCategory={activeCategory}
-            onCategoryChange={setActiveCategory}
-            restaurantName={restaurant?.name || 'Restaurant'}
-            items={filteredItems}
-            categories={categories}
-            vegOnly={vegOnly}
-            onToggleVeg={() => setVegOnly(v => !v)}
-            dietPreference={dietPreference}
-            onDietPreferenceChange={handleDietPreferenceChange}
-            cart={cartItems.reduce((acc, item) => ({ ...acc, [item.id]: item.quantity }), {})}
-            onQuantityChange={(sel, qty) => {
-              const id = sel.id
-              const nextQty = Math.max(0, qty || 0)
-              const existing = cartItems.find(i => i.id === id)
-              if (nextQty === 0) {
-                updateQuantity(id, 0)
-                return
-              }
-              if (existing) {
-                updateQuantity(id, nextQty)
-              } else {
-                // Add new item with exact quantity
-                setCartItems(prev => [...prev, { ...sel, quantity: nextQty }])
-              }
-            }}
-            onGoToCart={() => setIsCartOpen(true)}
-          />
+          {/* Main Content */}
+          <main>
+            <MenuItems
+              activeCategory={activeCategory}
+              onCategoryChange={(cat) => { setActiveCategory(cat); setUiStage('items') }}
+              restaurantName={restaurant?.name || 'Restaurant'}
+              // Provide the full items for internal filtering/search; MenuItems already filters
+              items={menuItems}
+              categories={categories}
+              categoriesMeta={categoriesMeta}
+              vegOnly={vegOnly}
+              onToggleVeg={() => setVegOnly(v => !v)}
+              dietPreference={dietPreference}
+              onDietPreferenceChange={handleDietPreferenceChange}
+              availableDiets={availableDiets}
+              showCategoryGrid={uiStage === 'categories'}
+              onPickCategory={handlePickCategory}
+              openItemId={openItemId}
+              cart={cartItems.reduce((acc, item) => ({ ...acc, [item.id]: item.quantity }), {})}
+              onQuantityChange={(sel, qty) => {
+                const id = sel.id
+                const nextQty = Math.max(0, qty || 0)
+                const existing = cartItems.find(i => i.id === id)
+                if (nextQty === 0) {
+                  updateQuantity(id, 0)
+                  return
+                }
+                if (existing) {
+                  updateQuantity(id, nextQty)
+                } else {
+                  setCartItems(prev => [...prev, { ...sel, quantity: nextQty }])
+                }
+              }}
+              onGoToCart={() => setIsCartOpen(true)}
+              onBackToCategories={() => { setUiStage('categories'); setOpenItemId(null); }}
+            />
 
         </main>
 

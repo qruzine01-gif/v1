@@ -2,7 +2,7 @@
 
 import React, { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Plus, Minus, X, ShoppingCart, ChevronDown, ChevronLeft } from "lucide-react"
+import { Plus, Minus, X, ShoppingCart, ChevronDown, ChevronLeft, Info } from "lucide-react"
 import { useRouter } from "next/navigation"
 import BannerMedia from "../../../../../../components/BannerMedia"
 import Header from "./Header"
@@ -408,13 +408,24 @@ function DesktopMenuItem({ item, quantity, onQuantityChange, cart, onOpenShowcas
   )
 }
 
-export default function MenuItems({ activeCategory, onCategoryChange, cart, onQuantityChange, items = [], categories = ["All"], vegOnly = false, onToggleVeg, onGoToCart, dietPreference = 'all', onDietPreferenceChange, restaurantName }) {
+export default function MenuItems({ activeCategory, onCategoryChange, cart, onQuantityChange, items = [], categories = ["All"], categoriesMeta = [], vegOnly = false, onToggleVeg, onGoToCart, dietPreference = 'all', onDietPreferenceChange, restaurantName, showCategoryGrid = false, onPickCategory, availableDiets = ['veg','nonveg','vegan'], openItemId = null, onBackToCategories }) {
+
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
+  const [showDisclaimer, setShowDisclaimer] = useState(false)
+
+  // Compute items respecting activeCategory, diet filters and search
   const baseItems = activeCategory === "All" 
     ? items 
     : items.filter(item => item.category === activeCategory)
-  const filteredItems = (baseItems || []).filter(it => {
+
+  let dietFiltered = baseItems
+  if (dietPreference === 'veg') dietFiltered = dietFiltered.filter(i => i.isVegetarian === true)
+  else if (dietPreference === 'nonveg') dietFiltered = dietFiltered.filter(i => i.isVegetarian !== true)
+  else if (dietPreference === 'vegan') dietFiltered = dietFiltered.filter(i => i.isVegan === true || (Array.isArray(i.tags) && i.tags.includes('vegan')))
+  if (vegOnly) dietFiltered = dietFiltered.filter(i => i.isVegetarian)
+
+  const filteredItems = (dietFiltered || []).filter(it => {
     if (!searchQuery) return true
     const q = searchQuery.toLowerCase()
     const name = String(it?.name || '').toLowerCase()
@@ -433,13 +444,6 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
     return sum + (Number.isFinite(n) ? n : 0)
   }, 0)
 
-  const triggerToast = () => {
-    setToastKey(k => k + 1)
-    setToastVisible(true)
-    // Auto-hide quickly to keep it snappy
-    setTimeout(() => setToastVisible(false), 900)
-  }
-
   // Wrap quantity change to detect increments
   const handleQuantityChange = (itm, q) => {
     const id = itm?.id ?? itm?.menuID
@@ -452,16 +456,46 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
 
   const [showcaseItem, setShowcaseItem] = useState(null)
 
+  // When showcase opens, push a history state so device back closes it instead of exiting site
+  React.useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && showcaseItem) {
+        window.history.pushState({ showcase: true }, '')
+      }
+    } catch {}
+  }, [showcaseItem])
+
+  // Close showcase on browser back (hardware back) instead of exiting
+  React.useEffect(() => {
+    function onPop() {
+      if (showcaseItem) {
+        setShowcaseItem(null)
+      }
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('popstate', onPop)
+      return () => window.removeEventListener('popstate', onPop)
+    }
+  }, [showcaseItem])
+
+  // Auto open item when instructed by parent (on category pick) before paint to avoid flicker
+  React.useLayoutEffect(() => {
+    if (!openItemId) return
+    const found = (items || []).find(it => (it.id || it.menuID) === openItemId)
+    if (found) setShowcaseItem(found)
+  }, [openItemId, items])
+
   return (
     <div className="px-2 py-4 bg-[#FFFAFA] min-h-screen">
 
-      {/* Categories */}
+      {/* Categories / Diet */}
       <div className="flex items-center justify-between pb-2 mb-3">
         <div className="flex gap-2 overflow-x-auto pr-2 [-ms-overflow-style:none] [scrollbar-width:none]" style={{ scrollbarWidth: 'none' }}>
           {categories.map(cat => (
             <button
               key={cat}
               onClick={() => onCategoryChange(cat)}
+
               className={`scroll-mx-4 snap-start whitespace-nowrap px-4 py-2 rounded-full text-sm md:text-base font-semibold transition-all shadow ${
                 activeCategory === cat
                   ? 'text-[#FFFAFA] shadow-lg border-2'
@@ -502,9 +536,7 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
                 role="menu"
               >
                 {[
-                  { key: 'veg', label: 'Veg only' },
-                  { key: 'nonveg', label: 'Non-veg' },
-                  { key: 'vegan', label: 'Vegan' },
+                  ...(['veg','nonveg','vegan'].filter(k => availableDiets.includes(k)).map(k => ({ key: k, label: k === 'veg' ? 'Veg only' : k === 'nonveg' ? 'Non-veg' : 'Vegan' }))),
                   { key: 'all', label: 'All items' },
                 ].map(opt => (
                   <button
@@ -547,9 +579,34 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
         </div>
       </div>
 
+      {/* Category grid when on initial stage and no search */}
+      {showCategoryGrid && !searchQuery && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+          {categories.filter(c => c !== 'All').map((cat) => {
+            const meta = (categoriesMeta || []).find(cm => cm?.name === cat)
+            const img = meta?.image || undefined
+            return (
+              <button
+                key={cat}
+                onClick={() => onPickCategory && onPickCategory(cat)}
+                className="relative rounded-xl overflow-hidden border-2 shadow hover:shadow-md transition h-28"
+                style={{ borderColor: 'rgb(212, 175, 55)', backgroundColor: '#111' }}
+              >
+                {img && (
+                  <img src={img} alt={cat} className="absolute inset-0 w-full h-full object-cover" />
+                )}
+                <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
+                  <p className="text-sm font-semibold text-white">{cat}</p>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {/* Mobile + Tablet Items (visible until lg) */}
       <div className="space-y-2">
-        {filteredItems.map((item, index) => (
+        {(showCategoryGrid && !searchQuery) || (openItemId && !showcaseItem) ? null : filteredItems.map((item, index) => (
           <div key={item.id || item.menuID || index}>
             <MobileMenuItem
               item={item}
@@ -570,7 +627,7 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
 
       {/* Desktop Items (lg and up) */}
       <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredItems.map((item, index) => {
+        {(showCategoryGrid && !searchQuery) || (openItemId && !showcaseItem) ? null : filteredItems.map((item, index) => {
           if (
             activeCategory === "All" &&
             index === Math.floor(filteredItems.length / 2)
@@ -618,7 +675,16 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
                 cartItemsCount={cartCount}
                 onCartClick={() => { if (typeof onGoToCart === 'function') { onGoToCart() } else { router.push('/cart') } }}
                 restaurantName = {restaurantName}
-                onBack={() => setShowcaseItem(null)}
+                onBack={() => {
+                  setShowcaseItem(null)
+                  if (typeof onBackToCategories === 'function') onBackToCategories()
+                  try {
+                    if (typeof window !== 'undefined' && window.history) {
+                      // Normalize history to categories state so further back doesn't exit site
+                      window.history.replaceState({ stage: 'categories' }, '')
+                    }
+                  } catch {}
+                }}
               />
             </div>
 
@@ -633,11 +699,48 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
                 className="overflow-y-auto max-h-[calc(100vh-56px)]"
               >
                 {showcaseItem.image && (
-                  <img
-                    src={showcaseItem.image}
-                    alt={showcaseItem.name}
-                    className="w-full max-h-[60vh] object-contain bg-white"
-                  />
+                  <div className="relative">
+                    <img
+                      src={showcaseItem.image}
+                      alt={showcaseItem.name}
+                      className="w-full max-h-[60vh] object-contain bg-white"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Show image disclaimer"
+                      onClick={() => setShowDisclaimer(v => !v)}
+                      className="absolute top-2 right-2 p-2 rounded-full border text-white"
+                      style={{ backgroundColor: 'rgba(0,0,0,0.6)', borderColor: 'rgba(255,255,255,0.2)' }}
+                    >
+                      <Info className="w-4 h-4" />
+                    </button>
+                    <AnimatePresence>
+                      {showDisclaimer && (
+                        <motion.div
+                          key="disclaimer"
+                          initial={{ opacity: 0, y: -6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -6 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                          className="absolute top-12 right-2 max-w-xs text-xs rounded-lg shadow border"
+                          style={{ backgroundColor: 'rgba(0,0,0,0.85)', color: '#FFFAFA', borderColor: 'rgba(255,255,255,0.15)' }}
+                        >
+                          <div className="p-2 pr-7 leading-snug">
+                            Images are for illustration only. Actual dish may vary.
+                          </div>
+                          <button
+                            type="button"
+                            aria-label="Close disclaimer"
+                            onClick={() => setShowDisclaimer(false)}
+                            className="absolute top-1.5 right-1.5 p-1 rounded"
+                            style={{ color: '#FFFAFA' }}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 )}
                 <div className="p-4 sm:p-6">
                   <h2 className="text-2xl font-semibold text-gray-900">{showcaseItem.name}</h2>
@@ -676,7 +779,7 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
                         </div>
                       ) : (
                         <button onClick={() => handleQuantityChange(showcaseItem, 1)} className="px-5 py-2.5 rounded-full text-white font-bold" style={{ background: 'linear-gradient(135deg, #800020 0%, #000000 100%)' }}>
-                          +
+                          Add
                         </button>
                       )}
                     </div>

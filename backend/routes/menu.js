@@ -384,6 +384,23 @@ router.get("/:resID/:qrID", async (req, res) => {
       return acc
     }, {})
 
+    // Build category metadata including images from Category model
+    let categoriesMeta = []
+    try {
+      const categoryDocs = await Category.find({ resID, isActive: true }).select("name image sortOrder")
+      const byName = new Map(categoryDocs.map(c => [c.name, c]))
+      categoriesMeta = Object.keys(menuByCategory).map((name) => {
+        const doc = byName.get(name)
+        return {
+          name,
+          image: doc?.image || null,
+          itemCount: (menuByCategory[name] || []).length,
+        }
+      })
+    } catch (e) {
+      categoriesMeta = Object.keys(menuByCategory).map((name) => ({ name, image: null, itemCount: (menuByCategory[name] || []).length }))
+    }
+
     res.json({
       success: true,
       data: {
@@ -402,6 +419,7 @@ router.get("/:resID/:qrID", async (req, res) => {
         },
         menu: menuByCategory,
         categories: Object.keys(menuByCategory),
+        categoriesMeta,
       },
     })
   } catch (error) {
