@@ -584,7 +584,8 @@ export default function MenuItems({ activeCategory, onCategoryChange, cart, onQu
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
           {categories.filter(c => c !== 'All').map((cat) => {
             const meta = (categoriesMeta || []).find(cm => cm?.name === cat)
-            const img = meta?.image || undefined
+            const fallbackItem = (items || []).find(i => i.category === cat)
+            const img = meta?.image || fallbackItem?.image || undefined
             return (
               <button
                 key={cat}
