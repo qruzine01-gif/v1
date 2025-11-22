@@ -1,12 +1,19 @@
 const { AwesomeQR } = require('awesome-qr');
-// Prefer @napi-rs/canvas in production (no system deps). Fallback to node-canvas.
+// Lazy canvas loader to avoid hard-failing when native modules are absent or mismatched
 let createCanvas, loadImage, registerFont;
-try {
-  ({ createCanvas, loadImage, registerFont } = require('@napi-rs/canvas'));
-  
-} catch (_) {
-  ({ createCanvas, loadImage, registerFont } = require('canvas'));
-  
+const ensureCanvas = () => {
+  if (createCanvas && loadImage) return true;
+  try {
+    ({ createCanvas, loadImage, registerFont } = require('@napi-rs/canvas'));
+    return true;
+  } catch (_) {
+    try {
+      ({ createCanvas, loadImage, registerFont } = require('canvas'));
+      return true;
+    } catch (__){
+      return false;
+    }
+  }
 }
 const fs = require('fs');
 const path = require('path');
@@ -37,20 +44,34 @@ const generateSafeBaseQR = async (text) => {
 
 // Generate a bare QR PNG (no branding), optionally with transparent background
 const generateBareQRPNG = async (text, { size = 1024, margin = 0, transparent = false } = {}) => {
-  const options = {
-    text,
-    size: Math.max(256, size),
-    margin: Math.max(0, margin),
-    correctLevel: AwesomeQR.CorrectLevel.H,
-    whiteMargin: !transparent,
-    dotScale: 1.0,
-    colorDark: '#000000',
-    colorLight: transparent ? 'rgba(0,0,0,0)' : '#FFFFFF',
-    autoColor: false,
-    binarize: true,
-  };
-  const buf = await new AwesomeQR(options).draw();
-  return buf;
+  try {
+    const options = {
+      text,
+      size: Math.max(256, size),
+      margin: Math.max(0, margin),
+      correctLevel: AwesomeQR.CorrectLevel.H,
+      whiteMargin: !transparent,
+      dotScale: 1.0,
+      colorDark: '#000000',
+      colorLight: transparent ? 'rgba(0,0,0,0)' : '#FFFFFF',
+      autoColor: false,
+      binarize: true,
+    };
+    const buf = await new AwesomeQR(options).draw();
+    return buf;
+  } catch (e) {
+    // Fallback to qrcode buffer
+    return await QRCodeLib.toBuffer(text, {
+      errorCorrectionLevel: 'H',
+      margin: Math.max(0, margin),
+      width: Math.max(256, size),
+      color: {
+        dark: '#000000',
+        light: transparent ? '#00000000' : '#FFFFFF',
+      },
+      type: 'image/png',
+    });
+  }
 };
 
 const bufferToDataUrl = (buf) => {
@@ -298,8 +319,12 @@ const generateMinimalProfessionalQR = async (data, restaurantName, options = {})
       }
     }
 
-    // Step 2: Compose the branded design
+    // Step 2: Compose the branded design (only if canvas is available)
     try {
+      if (!ensureCanvas()) {
+        // No native canvas available; return the base QR (still valid)
+        return qrDataUrl || bufferToDataUrl(qrBuffer);
+      }
       //console.log('[QR] Starting canvas composition');
       
       const canvasWidth = targetCanvasWidth;
